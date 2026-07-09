@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build": "prisma generate && vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist",
@@ -19,7 +19,6 @@
     "@types/papaparse": "^5.5.2",
     "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^17.2.3",
-    "esbuild": "^0.25.0",
     "express": "^4.21.2",
     "firebase": "^12.15.0",
     "firebase-admin": "^14.0.0",
@@ -31,11 +30,9 @@
     "nodemailer": "^8.0.10",
     "papaparse": "^5.5.4",
     "pg": "^8.22.0",
-    "prisma": "^7.8.0",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
     "recharts": "^3.8.1",
-    "typescript": "~5.8.2",
     "vite": "^6.2.3"
   },
   "devDependencies": {
@@ -44,13 +41,21 @@
     "@types/nodemailer": "^8.0.0",
     "@types/pg": "^8.20.0",
     "autoprefixer": "^10.4.21",
+    "esbuild": "^0.25.0",
+    "prisma": "^7.8.0",
     "tailwindcss": "^4.1.14",
-    "tsx": "^4.21.0"
-  }
-}
-{
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/server.js"
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.3"
+  },
+  "allowScripts": {
+    "@firebase/util@1.15.1": true,
+    "@google/genai@2.8.0": true,
+    "@prisma/engines@7.8.0": true,
+    "core-js@3.49.0": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.1": true,
+    "prisma@7.8.0": true,
+    "protobufjs@7.6.5": true
   }
 }
