@@ -10,6 +10,20 @@ import { performSchemaMigrationCheck } from "./src/schemaCheck";
 import { saveToPrisma, getFromPrisma } from "./src/dbHelper";
 
 dotenv.config();
+import express from "express";
+
+const app = express();
+
+app.get("/", (req, res) => {
+  res.send("API Running");
+});
+
+export default app;
+
+
+
+
+
 
 export function formatDbErrorMessage(msg: string): string {
   if (msg === "DB_NOT_CONFIGURED") {

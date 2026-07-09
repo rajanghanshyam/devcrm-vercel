@@ -46,14 +46,11 @@
     "autoprefixer": "^10.4.21",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0"
-  },
-  "allowScripts": {
-    "@firebase/util@1.15.1": true,
-    "@google/genai@2.8.0": true,
-    "@prisma/engines@7.8.0": true,
-    "core-js@3.49.0": true,
-    "prisma@7.8.0": true,
-    "protobufjs@7.6.5": true,
-    "esbuild@0.28.1": true
+  }
+}
+{
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js"
   }
 }
