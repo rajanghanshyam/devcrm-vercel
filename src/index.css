@@ -1,0 +1,137 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Roboto", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    font-family: 'Roboto', system-ui, -apple-system, sans-serif;
+    background-color: #f8fafc;
+    color: #0f172a;
+  }
+  
+  h1, h2, h3, h4, th {
+    font-family: 'Roboto', system-ui, sans-serif;
+    letter-spacing: -0.01em;
+  }
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Professional Print CSS centering and scaling only the active document layout */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0 !important;
+  }
+  
+  body {
+    visibility: hidden !important;
+    background-color: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Force printable targets to stand out of the document flow and print beautifully */
+  #printable-area-container,
+  #product-wise-report-printable {
+    visibility: visible !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 1.2cm !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: white !important;
+    color: black !important;
+    box-sizing: border-box !important;
+    display: block !important; /* Prevent CSS flexbox bugs from breaking table structure on print/save PDF */
+  }
+
+  /* Force child elements of printables to be completely visible */
+  #printable-area-container *,
+  #product-wise-report-printable * {
+    visibility: visible !important;
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .no-print, button, nav, aside, sidebar, header, .no-print-element {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Prevent page cutoff within key sections */
+  thead {
+    display: table-header-group !important;
+  }
+  tfoot {
+    display: table-footer-group !important;
+  }
+  table {
+    page-break-inside: auto;
+  }
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+
+  /* Cover Page print layout to fit exactly on page 1 without spillover */
+  .print-cover-page {
+    height: 273mm !important;
+    max-height: 273mm !important;
+    min-height: 273mm !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    box-sizing: border-box !important;
+  }
+
+  .page-break-inside-avoid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
+
+/* Prevent capturing scrollbars in PDF or PNG exports */
+#product-wise-report-printable,
+#product-wise-report-printable *,
+#printable-area-container,
+#printable-area-container * {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important;  /* IE/Edge */
+}
+
+#product-wise-report-printable::-webkit-scrollbar,
+#product-wise-report-printable *::-webkit-scrollbar,
+#printable-area-container::-webkit-scrollbar,
+#printable-area-container *::-webkit-scrollbar {
+  display: none !important; /* Chrome/Safari */
+  width: 0 !important;
+  height: 0 !important;
+}
