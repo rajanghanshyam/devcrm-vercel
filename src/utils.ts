@@ -119,8 +119,7 @@ export function calculateTaxTotals(
   customerState: string,
   companyState: string,
   additionalDiscount: number = 0,
-  freight: number = 0,
-  enableGst: boolean = true
+  freight: number = 0
 ) {
   let subtotal = 0;
   let discountTotal = 0;
@@ -128,26 +127,17 @@ export function calculateTaxTotals(
   let sgstTotal = 0;
   let igstTotal = 0;
 
-  const isIntrastate = String(customerState || "").trim().toLowerCase() === String(companyState || "").trim().toLowerCase();
+  const isIntrastate = customerState.trim().toLowerCase() === companyState.trim().toLowerCase();
 
-  const numAdditionalDiscount = Number(additionalDiscount) || 0;
-  const numFreight = Number(freight) || 0;
-
-  (items || []).forEach((item) => {
-    const rate = Number(item.rate) || 0;
-    const quantity = Number(item.quantity) || 0;
-    const discountPercent = Number(item.discountPercent) || 0;
-    const gstPercent = Number(item.gstPercent) || 0;
-
-    const baseVal = rate * quantity;
-    const discountVal = (baseVal * discountPercent) / 100;
+  items.forEach((item) => {
+    const baseVal = item.rate * item.quantity;
+    const discountVal = (baseVal * item.discountPercent) / 100;
     const taxableVal = baseVal - discountVal;
 
     subtotal += baseVal;
     discountTotal += discountVal;
 
-    const gstPercentToUse = enableGst !== false ? gstPercent : 0;
-    const totalGst = (taxableVal * gstPercentToUse) / 100;
+    const totalGst = (taxableVal * item.gstPercent) / 100;
 
     if (isIntrastate) {
       cgstTotal += totalGst / 2;
@@ -157,7 +147,7 @@ export function calculateTaxTotals(
     }
   });
 
-  const grandTotal = subtotal - discountTotal - numAdditionalDiscount + numFreight + cgstTotal + sgstTotal + igstTotal;
+  const grandTotal = subtotal - discountTotal - additionalDiscount + freight + cgstTotal + sgstTotal + igstTotal;
 
   return {
     subtotal: Math.round(subtotal * 100) / 100,

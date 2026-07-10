@@ -60,16 +60,16 @@ export default function ProductView({
   const openEditForm = (prod: Product) => {
     setFormType("edit");
     setActiveProductId(prod.id);
-    setFormName(prod.name || "");
-    setFormSku(prod.sku || "");
-    setFormRate(prod.rate !== undefined && prod.rate !== null ? String(prod.rate) : "0");
-    setFormGst(prod.gstRate || 0);
+    setFormName(prod.name);
+    setFormSku(prod.sku);
+    setFormRate(String(prod.rate));
+    setFormGst(prod.gstRate);
     setFormHsn(prod.hsnCode || "");
-    setFormDesc(prod.description || "");
+    setFormDesc(prod.description);
     setFormItemType(prod.itemType || "Product");
-    setFormMrp(prod.mrp !== undefined && prod.mrp !== null ? String(prod.mrp) : "");
-    setFormLastPurchasePrice(prod.lastPurchasePrice !== undefined && prod.lastPurchasePrice !== null ? String(prod.lastPurchasePrice) : "");
-    setFormSellPrice(prod.sellPrice !== undefined && prod.sellPrice !== null ? String(prod.sellPrice) : "");
+    setFormMrp(prod.mrp !== undefined ? String(prod.mrp) : "");
+    setFormLastPurchasePrice(prod.lastPurchasePrice !== undefined ? String(prod.lastPurchasePrice) : "");
+    setFormSellPrice(prod.sellPrice !== undefined ? String(prod.sellPrice) : "");
     setIsFormOpen(true);
   };
 
@@ -208,19 +208,19 @@ export default function ProductView({
                     {filteredProducts.map((p, idx) => {
                       const type = p.itemType || "Product";
                       let typeBadge = (
-                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-50 text-blue-750 border border-blue-200 uppercase tracking-wider min-w-[75px] select-none text-center">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-50 text-blue-750 border border-blue-100 uppercase">
                           Product
                         </span>
                       );
                       if (type === "Service") {
                         typeBadge = (
-                          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200 uppercase tracking-wider min-w-[75px] select-none text-center">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-100 uppercase">
                             Service
                           </span>
                         );
                       } else if (type === "Agreement") {
                         typeBadge = (
-                          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-purple-50 text-purple-700 border border-purple-200 uppercase tracking-wider min-w-[75px] select-none text-center">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-purple-50 text-purple-700 border border-purple-100 uppercase">
                             Agreement
                           </span>
                         );

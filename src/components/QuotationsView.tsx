@@ -53,9 +53,6 @@ export default function QuotationsView({
   
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [companyFilter, setCompanyFilter] = useState("All");
-  const [coverTheme, setCoverTheme] = useState<"classic-blue" | "modern-gold" | "tech-dark" | "minimal-charcoal" | "corporate-accent">("corporate-accent");
-  const [includeCoverPage, setIncludeCoverPage] = useState(false);
   
   // Views navigation inside Quotations: "list" | "create" | "detail" | "edit"
   const [activeSubView, setActiveSubView] = useState<"list" | "create" | "detail" | "edit">("list");
@@ -90,7 +87,6 @@ export default function QuotationsView({
 
   // Form States for creating/editing
   const [formCompanyId, setFormCompanyId] = useState("");
-  const [formTemplateType, setFormTemplateType] = useState<"Standard">("Standard");
   const [formTermsPresetId, setFormTermsPresetId] = useState("");
   const [formQuoteNo, setFormQuoteNo] = useState("");
   const [formDate, setFormDate] = useState("");
@@ -134,8 +130,7 @@ export default function QuotationsView({
       ifsc: companySettings.ifsc,
       headerImage: companySettings.headerImage,
       footerImage: companySettings.footerImage,
-      termsPresets: companySettings.termsPresets || [],
-      enableGst: companySettings.enableGst
+      termsPresets: companySettings.termsPresets || []
     };
   };
 
@@ -162,7 +157,6 @@ export default function QuotationsView({
 
     // Reset Form
     setFormCompanyId(resolvedProfile.id || "comp_apex");
-    setFormTemplateType("Standard");
     setFormTermsPresetId(resolvedProfile.termsPresets?.[0]?.id || "");
     setFormQuoteNo(generateNewQuoteNumber(resolvedProfile));
     setFormDate(todayStr);
@@ -192,15 +186,14 @@ export default function QuotationsView({
   const openEditForm = (quote: Quotation) => {
     setActiveQuoteId(quote.id);
     setFormCompanyId(quote.companyId || "comp_apex");
-    setFormTemplateType(quote.templateType || "Standard");
     setFormTermsPresetId(quote.termsPresetId || "");
-    setFormQuoteNo(quote.quotationNo || "");
+    setFormQuoteNo(quote.quotationNo);
     setFormDate(toInputDate(quote.date));
     setFormValidUntil(toInputDate(quote.validUntil));
-    setFormCustomerId(quote.customerId || "");
-    setFormTerms(quote.terms || "");
+    setFormCustomerId(quote.customerId);
+    setFormTerms(quote.terms);
     setFormItems([...quote.items]);
-    setFormStatus(quote.status || "Pending");
+    setFormStatus(quote.status);
     setFormFreight(quote.freight || 0);
     setFormAdditionalDiscount(quote.additionalDiscount || 0);
     setRevisingQuoteId(null);
@@ -210,10 +203,9 @@ export default function QuotationsView({
   // Open Revision Form
   const openRevisionForm = (quote: Quotation) => {
     setFormCompanyId(quote.companyId || "comp_apex");
-    setFormTemplateType(quote.templateType || "Standard");
     setFormTermsPresetId(quote.termsPresetId || "");
     
-    const baseNo = quote.quotationNo || "";
+    const baseNo = quote.quotationNo;
     let nextQuoteNo = baseNo;
     const match = baseNo.match(/(.*)[-/_]R(\d+)$/i);
     if (match) {
@@ -221,7 +213,7 @@ export default function QuotationsView({
       const rev = parseInt(match[2], 10) + 1;
       nextQuoteNo = `${base}-R${rev}`;
     } else {
-      nextQuoteNo = `${baseNo ? baseNo + "-R1" : "QTN-R1"}`;
+      nextQuoteNo = `${baseNo}-R1`;
     }
     
     setFormQuoteNo(nextQuoteNo);
@@ -229,8 +221,8 @@ export default function QuotationsView({
     const expDate = new Date();
     expDate.setDate(expDate.getDate() + 30);
     setFormValidUntil(expDate.toISOString().split("T")[0]);
-    setFormCustomerId(quote.customerId || "");
-    setFormTerms(quote.terms || "");
+    setFormCustomerId(quote.customerId);
+    setFormTerms(quote.terms);
     setFormItems(quote.items.map(item => ({ ...item })));
     setFormStatus("Pending");
     setFormFreight(quote.freight || 0);
@@ -398,8 +390,7 @@ export default function QuotationsView({
     const customer = customers.find(c => c.id === formCustomerId);
     const sourceState = selectedFormProfile?.state || companySettings.state || "Maharashtra";
     const destinationState = customer ? customer.state : sourceState;
-    const isGstEnabled = selectedFormProfile ? (selectedFormProfile.enableGst !== false) : (companySettings.enableGst !== false);
-    return calculateTaxTotals(formItems, destinationState, sourceState, formAdditionalDiscount, formFreight, isGstEnabled);
+    return calculateTaxTotals(formItems, destinationState, sourceState, formAdditionalDiscount, formFreight);
   };
 
   // Save creation / edition
@@ -446,7 +437,6 @@ export default function QuotationsView({
         status: formStatus,
         terms: formTerms,
         companyId: formCompanyId,
-        templateType: formTemplateType,
         termsPresetId: formTermsPresetId,
         freight: formFreight,
         additionalDiscount: formAdditionalDiscount,
@@ -492,7 +482,6 @@ export default function QuotationsView({
             status: formStatus,
             terms: formTerms,
             companyId: formCompanyId,
-            templateType: formTemplateType,
             termsPresetId: formTermsPresetId,
             freight: formFreight,
             additionalDiscount: formAdditionalDiscount
@@ -528,10 +517,8 @@ export default function QuotationsView({
       (compName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (clientName || "").toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = statusFilter === "All" || q.status === statusFilter;
-    const matchesCompany = companyFilter === "All" || q.companyId === companyFilter;
-    
-    return matchesSearch && matchesStatus && matchesCompany;
+    if (statusFilter === "All") return matchesSearch;
+    return matchesSearch && q.status === statusFilter;
   });
 
   return (
@@ -554,7 +541,7 @@ export default function QuotationsView({
           </div>
 
           {/* Filters Bar */}
-          <div className="flex flex-col md:flex-row gap-4 bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm font-sans">
+          <div className="flex flex-col sm:flex-row gap-4 bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm font-sans">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
               <input
@@ -567,38 +554,21 @@ export default function QuotationsView({
               />
             </div>
             
-            <div className="flex items-center gap-4 flex-wrap md:flex-nowrap shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Company:</span>
-                <select
-                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:ring-1 focus:ring-indigo-500 focus:outline-none focus:border-indigo-500 max-w-[200px]"
-                  value={companyFilter}
-                  onChange={(e) => setCompanyFilter(e.target.value)}
-                  id="quote-company-filter"
-                >
-                  <option value="All">All Companies</option>
-                  {companyProfiles.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Status:</span>
-                <select
-                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:ring-1 focus:ring-indigo-500 focus:outline-none focus:border-indigo-500"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  id="quote-status-filter"
-                >
-                  <option value="All">All Documents</option>
-                  <option value="Approved">Approved</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Draft">Draft</option>
-                  <option value="Converted">Converted</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
-              </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Status:</span>
+              <select
+                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:ring-1 focus:ring-indigo-500 focus:outline-none focus:border-indigo-500"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                id="quote-status-filter"
+              >
+                <option value="All">All Documents</option>
+                <option value="Approved">Approved</option>
+                <option value="Pending">Pending</option>
+                <option value="Draft">Draft</option>
+                <option value="Converted">Converted</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
             </div>
           </div>
 
@@ -918,166 +888,159 @@ export default function QuotationsView({
               </button>
             </div>
 
-            {(() => {
-              const formIsGstEnabled = selectedFormProfile ? (selectedFormProfile.enableGst !== false) : (companySettings.enableGst !== false);
-              return (
-                <div className="space-y-2 font-sans">
-                  {/* Table Header */}
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 p-2 font-bold text-[10px] text-slate-500 uppercase border-b border-slate-200">
-                    <div className={formIsGstEnabled ? "md:col-span-4" : "md:col-span-5"}>Product / Item</div>
-                    <div className="md:col-span-1">Qty</div>
-                    <div className="md:col-span-2">Rate</div>
-                    <div className="md:col-span-1">Disc %</div>
-                    {formIsGstEnabled && <div className="md:col-span-1">GST %</div>}
-                    <div className="md:col-span-2">Amount (₹)</div>
-                    <div className="md:col-span-1"></div>
+            <div className="space-y-2 font-sans">
+              {/* Table Header */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 p-2 font-bold text-[10px] text-slate-500 uppercase border-b border-slate-200">
+                <div className="md:col-span-4">Product / Item</div>
+                <div className="md:col-span-1">Qty</div>
+                <div className="md:col-span-2">Rate</div>
+                <div className="md:col-span-1">Disc %</div>
+                <div className="md:col-span-1">GST %</div>
+                <div className="md:col-span-2">Amount (₹)</div>
+                <div className="md:col-span-1"></div>
+              </div>
+
+              {formItems.map((item, idx) => (
+                <div 
+                  key={idx}
+                  className="grid grid-cols-1 md:grid-cols-12 gap-2.5 p-3.5 bg-slate-50 rounded-lg border border-slate-200"
+                >
+                  {/* Select Product */}
+                  <div className="md:col-span-4 rounded-md">
+                    <select
+                      className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
+                      value={item.productId}
+                      onChange={(e) => handleProductChangeInRow(idx, e.target.value)}
+                      required
+                    >
+                      <option value="">-- Choose Product / Service / SLA --</option>
+                      <option value="__NEW_PRODUCT__" className="text-indigo-650 font-bold bg-indigo-50">+ Quick Add Line Entry...</option>
+                      {(() => {
+                        const itemProducts = products.filter(p => !p.itemType || p.itemType === "Product");
+                        const itemServices = products.filter(p => p.itemType === "Service");
+                        const itemAgreements = products.filter(p => p.itemType === "Agreement");
+                        return (
+                          <>
+                            {itemProducts.length > 0 && (
+                              <optgroup label="Products 📦">
+                                {itemProducts.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.sku} | {p.name}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {itemServices.length > 0 && (
+                              <optgroup label="Services 🛠️">
+                                {itemServices.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.sku} | {p.name}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {itemAgreements.length > 0 && (
+                              <optgroup label="Agreements & SLAs 📝">
+                                {itemAgreements.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.sku} | {p.name}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </select>
                   </div>
 
-                  {formItems.map((item, idx) => (
-                    <div 
-                      key={idx}
-                      className="grid grid-cols-1 md:grid-cols-12 gap-2.5 p-3.5 bg-slate-50 rounded-lg border border-slate-200"
+                  {/* Quantity */}
+                  <div className="md:col-span-1">
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      placeholder="Qty"
+                      className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-800 text-center focus:outline-none focus:border-indigo-500"
+                      value={item.quantity}
+                      onChange={(e) => handleItemValueChange(idx, "quantity", parseInt(e.target.value) || 1)}
+                    />
+                  </div>
+
+                  {/* Rate */}
+                  <div className="md:col-span-2">
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      placeholder="Rate"
+                      className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-800 text-right focus:outline-none font-mono focus:border-indigo-500"
+                      value={item.rate}
+                      onChange={(e) => handleItemValueChange(idx, "rate", parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+
+                  {/* Discount percent */}
+                  <div className="md:col-span-1">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.001"
+                      placeholder="Disc %"
+                      className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-800 text-center focus:outline-none focus:border-indigo-500"
+                      value={item.discountPercent}
+                      onChange={(e) => handleItemValueChange(idx, "discountPercent", parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+
+                  {/* GST rate */}
+                  <div className="md:col-span-1">
+                    <select
+                      className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
+                      value={item.gstPercent}
+                      onChange={(e) => handleItemValueChange(idx, "gstPercent", parseInt(e.target.value) || 18)}
                     >
-                      {/* Select Product */}
-                      <div className={formIsGstEnabled ? "md:col-span-4 rounded-md" : "md:col-span-5 rounded-md"}>
-                        <select
-                          className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
-                          value={item.productId}
-                          onChange={(e) => handleProductChangeInRow(idx, e.target.value)}
-                          required
-                        >
-                          <option value="">-- Choose Product / Service / SLA --</option>
-                          <option value="__NEW_PRODUCT__" className="text-indigo-650 font-bold bg-indigo-50">+ Quick Add Line Entry...</option>
-                          {(() => {
-                            const itemProducts = products.filter(p => !p.itemType || p.itemType === "Product");
-                            const itemServices = products.filter(p => p.itemType === "Service");
-                            const itemAgreements = products.filter(p => p.itemType === "Agreement");
-                            return (
-                              <>
-                                {itemProducts.length > 0 && (
-                                  <optgroup label="Products 📦">
-                                    {itemProducts.map((p) => (
-                                      <option key={p.id} value={p.id}>
-                                        {p.sku} | {p.name}
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                )}
-                                {itemServices.length > 0 && (
-                                  <optgroup label="Services 🛠️">
-                                    {itemServices.map((p) => (
-                                      <option key={p.id} value={p.id}>
-                                        {p.sku} | {p.name}
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                )}
-                                {itemAgreements.length > 0 && (
-                                  <optgroup label="Agreements & SLAs 📝">
-                                    {itemAgreements.map((p) => (
-                                      <option key={p.id} value={p.id}>
-                                        {p.sku} | {p.name}
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                )}
-                              </>
-                            );
-                          })()}
-                        </select>
-                      </div>
+                      <option value="0">0%</option>
+                      <option value="5">5%</option>
+                      <option value="12">12%</option>
+                      <option value="18">18%</option>
+                      <option value="28">28%</option>
+                    </select>
+                  </div>
 
-                      {/* Quantity */}
-                      <div className="md:col-span-1">
-                        <input
-                          type="number"
-                          required
-                          min="1"
-                          placeholder="Qty"
-                          className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-800 text-center focus:outline-none focus:border-indigo-500"
-                          value={item.quantity}
-                          onChange={(e) => handleItemValueChange(idx, "quantity", parseInt(e.target.value) || 1)}
-                        />
-                      </div>
-
-                      {/* Rate */}
-                      <div className="md:col-span-2">
-                        <input
-                          type="number"
-                          required
-                          min="0"
-                          placeholder="Rate"
-                          className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-800 text-right focus:outline-none font-mono focus:border-indigo-500"
-                          value={item.rate}
-                          onChange={(e) => handleItemValueChange(idx, "rate", parseFloat(e.target.value) || 0)}
-                        />
-                      </div>
-
-                      {/* Discount percent */}
-                      <div className="md:col-span-1">
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="0.001"
-                          placeholder="Disc %"
-                          className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-800 text-center focus:outline-none focus:border-indigo-500"
-                          value={item.discountPercent}
-                          onChange={(e) => handleItemValueChange(idx, "discountPercent", parseFloat(e.target.value) || 0)}
-                        />
-                      </div>
-
-                      {/* GST rate */}
-                      {formIsGstEnabled && (
-                        <div className="md:col-span-1">
-                          <select
-                            className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
-                            value={item.gstPercent}
-                            onChange={(e) => handleItemValueChange(idx, "gstPercent", parseInt(e.target.value) || 18)}
-                          >
-                            <option value="0">0%</option>
-                            <option value="5">5%</option>
-                            <option value="12">12%</option>
-                            <option value="18">18%</option>
-                            <option value="28">28%</option>
-                          </select>
-                        </div>
-                      )}
-
-                      {/* Amount (Display) */}
-                      <div className="md:col-span-2">
-                        <div className="w-full bg-slate-100 border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-800 text-right font-bold h-7 flex items-center justify-end">
-                          {(item.quantity * item.rate * (1 - item.discountPercent / 100) * (1 + (formIsGstEnabled ? item.gstPercent : 0) / 100)).toFixed(2)}
-                        </div>
-                      </div>
-
-                      {/* Delete button */}
-                      <div className="md:col-span-1 text-center flex items-center justify-center">
-                        <button
-                          type="button"
-                          disabled={formItems.length === 1}
-                          onClick={() => removeFormItemRow(idx)}
-                          className="p-1.5 rounded bg-white hover:bg-rose-50 text-rose-500 border border-slate-200 hover:border-rose-200 transition-all cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      {/* Item Description - Multiline below */}
-                      <div className="md:col-span-12 rounded-md">
-                        <textarea
-                          rows={2}
-                          placeholder="Item Description"
-                          className="w-full bg-slate-50 border border-slate-100 rounded-md px-2 py-1 text-xs text-slate-600 focus:outline-none focus:border-indigo-300"
-                          value={item.description}
-                          onChange={(e) => handleItemValueChange(idx, "description", e.target.value)}
-                        />
-                      </div>
+                  {/* Amount (Display) */}
+                  <div className="md:col-span-2">
+                    <div className="w-full bg-slate-100 border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-800 text-right font-bold h-7 flex items-center justify-end">
+                      {(item.quantity * item.rate * (1 - item.discountPercent / 100) * (1 + item.gstPercent / 100)).toFixed(2)}
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Delete button */}
+                  <div className="md:col-span-1 text-center flex items-center justify-center">
+                    <button
+                      type="button"
+                      disabled={formItems.length === 1}
+                      onClick={() => removeFormItemRow(idx)}
+                      className="p-1.5 rounded bg-white hover:bg-rose-50 text-rose-500 border border-slate-200 hover:border-rose-200 transition-all cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Item Description - Multiline below */}
+                   <div className="md:col-span-12 rounded-md">
+                    <textarea
+                      rows={2}
+                      placeholder="Item Description"
+                      className="w-full bg-slate-50 border border-slate-100 rounded-md px-2 py-1 text-xs text-slate-600 focus:outline-none focus:border-indigo-300"
+                      value={item.description}
+                      onChange={(e) => handleItemValueChange(idx, "description", e.target.value)}
+                    />
+                  </div>
                 </div>
-              );
-            })()}
+              ))}
+            </div>
           </div>
 
           {/* Interactive live totals summary */}
@@ -1155,8 +1118,7 @@ export default function QuotationsView({
                 const { subtotal, discountTotal, cgstTotal, sgstTotal, igstTotal, grandTotal } = getFormCalculatedTotals();
                 const selectedCust = customers.find(c => c.id === formCustomerId);
                 const activeSourceState = selectedFormProfile?.state || companySettings.state || "Maharashtra";
-                const isIntrastate = selectedCust ? (selectedCust.state || "").trim().toLowerCase() === (activeSourceState || "").trim().toLowerCase() : true;
-                const formIsGstEnabled = selectedFormProfile ? (selectedFormProfile.enableGst !== false) : (companySettings.enableGst !== false);
+                const isIntrastate = selectedCust ? selectedCust.state.trim().toLowerCase() === activeSourceState.trim().toLowerCase() : true;
                 
                 return (
                   <>
@@ -1187,7 +1149,7 @@ export default function QuotationsView({
                       <span className="font-mono text-slate-900 font-bold">{formatINR(subtotal - discountTotal - formAdditionalDiscount + formFreight)}</span>
                     </div>
                     
-                    {formIsGstEnabled && (isIntrastate ? (
+                    {isIntrastate ? (
                       <>
                         <div className="flex justify-between text-indigo-705">
                           <span>Central GST (CGST Component):</span>
@@ -1203,7 +1165,7 @@ export default function QuotationsView({
                         <span>Integrated GST (IGST Component):</span>
                         <span className="font-mono font-bold">{formatINR(igstTotal)}</span>
                       </div>
-                    ))}
+                    )}
                     
                     <div className="flex justify-between text-indigo-650 border-t border-slate-200 pt-2 text-sm font-bold">
                       <span className="uppercase tracking-wide">Grand Total (Rounded):</span>
@@ -1307,10 +1269,6 @@ export default function QuotationsView({
             )}
           </div>
 
-
-
-
-
           {/* Revision Roadmap Timeline */}
           {(() => {
             const currentQuote = getSelectedQuote();
@@ -1373,7 +1331,6 @@ export default function QuotationsView({
             );
           })()}
 
-
           {/* Core Invoice/Quotation Template (Indian GST Standards) */}
           {(() => {
             const quote = getSelectedQuote();
@@ -1381,684 +1338,34 @@ export default function QuotationsView({
             
             const compProfile = getDocCompanyProfile(quote.companyId);
             const client = customers.find(c => c.id === quote.customerId);
-            const isIntrastate = (client && compProfile) ? (client.state || "").trim().toLowerCase() === (compProfile.state || "").trim().toLowerCase() : true;
-            const isGstEnabled = compProfile.enableGst !== false;
-            const isAmcCover = includeCoverPage;
-
-            if (false) {
-              return (
-                <div 
-                  className="max-w-4xl w-full rounded-2xl border border-slate-250 shadow-xl p-8 sm:p-12 md:p-16 my-6 space-y-12 bg-white text-slate-900 flex flex-col font-sans mx-auto min-h-[100vh] print:my-0 print:p-0 print:border-0 print:shadow-none print:rounded-none print:max-w-none print:space-y-0"
-                  id="printable-area-container"
-                  style={{ textTransform: "none" }}
-                >
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr>
-                        <th className="p-0 border-none font-normal">
-                          {compProfile.headerImage ? (
-                            <div className="w-full mb-6">
-                              <img 
-                                src={compProfile.headerImage} 
-                                alt="Header" 
-                                className="w-full h-auto rounded-t-xl print:rounded-none" 
-                                referrerPolicy="no-referrer"
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-3 py-4 border-b border-slate-200 mb-6">
-                              <div className="p-2.5 bg-indigo-600 text-white rounded-lg">
-                                <FileCheck2 className="w-6 h-6" />
-                              </div>
-                              <span className="font-sans font-bold text-2xl text-slate-900 tracking-tight">
-                                {compProfile.name}
-                              </span>
-                            </div>
-                          )}
-                          
-                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4 border-b border-slate-200 mb-8 text-left">
-                            <div>
-                              <span className="text-[10px] font-black tracking-widest text-indigo-600 uppercase">SERVICE AGREEMENT PROPOSAL</span>
-                              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
-                                ANNUAL MAINTENANCE CONTRACT
-                              </h1>
-                              <p className="text-xs text-slate-500 mt-1">Formal Quotation & SLA Terms</p>
-                            </div>
-                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs font-medium space-y-1 min-w-[200px]">
-                              <div className="flex justify-between gap-4">
-                                <span className="text-slate-450 uppercase text-[9px] font-bold">Proposal No:</span>
-                                <span className="font-mono font-bold text-slate-800">{quote.quotationNo}</span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span className="text-slate-450 uppercase text-[9px] font-bold">Proposal Date:</span>
-                                <span className="text-slate-700 font-bold">{formatDate(quote.date)}</span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span className="text-slate-450 uppercase text-[9px] font-bold">Valid Until:</span>
-                                <span className="text-slate-700 font-bold">{formatDate(quote.validUntil)}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      <tr>
-                        <td className="p-0 border-none">
-                          {/* Parties Grid */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs leading-relaxed text-left mb-8">
-                            <div className="p-5 bg-indigo-50/30 rounded-xl border border-indigo-100/50 space-y-2">
-                              <h3 className="font-extrabold text-indigo-700 uppercase tracking-widest text-[9px]">The Client (Contract Receiver)</h3>
-                              <div className="font-bold text-sm text-slate-850">{client?.company || "N/A"}</div>
-                              <div className="text-slate-600 leading-normal whitespace-pre-line">
-                                {client?.billingAddress || "N/A"}
-                              </div>
-                              <div className="pt-2 border-t border-indigo-100/40 space-y-1">
-                                <div><span className="opacity-60 font-semibold font-sans">Contact Person:</span> {client?.name || "N/A"}</div>
-                                <div><span className="opacity-60 font-semibold font-sans">Phone:</span> <span className="font-mono">{client?.phone || "N/A"}</span></div>
-                                {client?.gstin && <div><span className="opacity-60 font-semibold font-sans">GSTIN:</span> <span className="font-mono font-bold">{client.gstin}</span></div>}
-                              </div>
-                            </div>
-
-                            <div className="p-5 bg-slate-50/50 rounded-xl border border-slate-200/50 space-y-2">
-                              <h3 className="font-extrabold text-slate-500 uppercase tracking-widest text-[9px]">The Provider (Contract Issuer)</h3>
-                              <div className="font-bold text-sm text-slate-855">{compProfile.name}</div>
-                              <div className="text-slate-600 leading-normal whitespace-pre-line">
-                                {compProfile.address || "N/A"}
-                              </div>
-                              <div className="pt-2 border-t border-slate-200/45 space-y-1">
-                                <div><span className="opacity-60 font-semibold font-sans">Support Desk:</span> {compProfile.phone || "N/A"}</div>
-                                <div><span className="opacity-60 font-semibold font-sans">Email:</span> {compProfile.email || "N/A"}</div>
-                                {compProfile.gstin && <div><span className="opacity-60 font-semibold font-sans">GSTIN:</span> <span className="font-mono font-bold">{compProfile.gstin}</span></div>}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Scope of Work Section Indicator */}
-                          <div className="mb-4 text-left">
-                            <span className="text-[10px] font-black tracking-widest text-slate-450 uppercase">SECTION I: BILL OF QUANTITIES & PRICING</span>
-                          </div>
-
-                          {/* Products & SLA Services Table */}
-                          <div className="overflow-x-auto ring-1 ring-slate-150 rounded-xl mb-8">
-                            <table className="w-full text-left text-xs text-slate-700 min-w-[650px] border-collapse">
-                              <thead>
-                                <tr className="bg-slate-50 text-slate-700 border-b border-slate-200 uppercase text-[9px] font-black tracking-wider text-left">
-                                  <th className="py-3.5 px-4 text-center w-12 font-bold font-sans">#</th>
-                                  <th className="py-3.5 px-4 max-w-sm font-bold font-sans">Service description / AMC Scope</th>
-                                  <th className="py-3.5 px-3 text-center font-bold font-sans">HSN Code</th>
-                                  <th className="py-3.5 px-3 text-center font-bold font-sans">Qty</th>
-                                  <th className="py-3.5 px-3 text-right font-bold font-sans">Unit Rate</th>
-                                  <th className="py-3.5 px-3 text-center font-bold font-sans">Disc.</th>
-                                  {isGstEnabled && <th className="py-3.5 px-3 text-center font-bold font-sans">GST</th>}
-                                  <th className="py-3.5 px-4 text-right font-bold font-sans">{isGstEnabled ? "Taxable Basic Value" : "Amount"}</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-100 text-slate-600 text-left">
-                                {quote.items.map((item, idx) => {
-                                  const baseVal = item.rate * item.quantity;
-                                  const discVal = (baseVal * item.discountPercent) / 100;
-                                  const finalVal = baseVal - discVal;
-                                  return (
-                                    <tr key={idx} className="hover:bg-slate-50/50">
-                                      <td className="py-3.5 px-4 text-center font-bold text-slate-400 font-mono">
-                                        {idx + 1}
-                                      </td>
-                                      <td className="py-3.5 px-4">
-                                        <div className="font-bold text-slate-800">{item.productName}</div>
-                                        {item.description && <div className="text-[10px] text-slate-505 mt-1 whitespace-pre-wrap leading-relaxed">{item.description}</div>}
-                                      </td>
-                                      <td className="py-3.5 px-3 text-center font-mono">
-                                        {item.hsnCode || "-"}
-                                      </td>
-                                      <td className="py-3.5 px-3 text-center font-bold text-slate-800 font-mono">
-                                        {item.quantity}
-                                      </td>
-                                      <td className="py-3.5 px-3 text-right font-mono font-medium">
-                                        {formatINR(item.rate)}
-                                      </td>
-                                      <td className="py-3.5 px-3 text-center font-mono font-semibold text-rose-500">
-                                        {item.discountPercent > 0 ? `${item.discountPercent}%` : "-"}
-                                      </td>
-                                      {isGstEnabled && (
-                                        <td className="py-3.5 px-3 text-center font-semibold font-mono text-indigo-600">
-                                          {item.gstPercent}%
-                                        </td>
-                                      )}
-                                      <td className="py-3.5 px-4 text-right font-bold text-slate-800 font-mono">
-                                        {formatINR(finalVal)}
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-
-                          {/* Subtotals Grid */}
-                          <div className="flex flex-col md:flex-row justify-between gap-8 items-start text-left mb-12">
-                            {/* Bank details */}
-                            <div className="w-full md:max-w-md p-5 bg-slate-50 rounded-xl border border-slate-200/60 space-y-3 text-xs font-sans">
-                              <span className="font-extrabold text-slate-500 uppercase select-none text-[9px] tracking-wider block pb-1.5 border-b border-slate-200">
-                                REMITTANCE & BANK BILLING DETAILS
-                              </span>
-                              <div className="grid grid-cols-3 gap-y-1.5">
-                                <span className="text-slate-500">Bank Name:</span>
-                                <span className="col-span-2 font-bold text-slate-850">{compProfile.bankName}</span>
-                                
-                                <span className="text-slate-550 font-sans">Branch Name:</span>
-                                <span className="col-span-2 font-semibold text-slate-850">{compProfile.bankBranch}</span>
-                                
-                                <span className="text-slate-550 font-sans">Account No:</span>
-                                <span className="col-span-2 font-mono font-bold text-slate-900">{compProfile.accountNo}</span>
-                                
-                                <span className="text-slate-550 font-mono">IFSC Code:</span>
-                                <span className="col-span-2 font-mono font-bold text-indigo-700">{compProfile.ifsc}</span>
-                              </div>
-                            </div>
-
-                            {/* Calculation right column */}
-                            <div className="w-full md:max-w-xs space-y-2.5 text-xs font-medium self-end font-sans">
-                              <div className="flex justify-between text-slate-505">
-                                <span>Total Basic Value:</span>
-                                <span className="font-mono text-slate-800 font-semibold">{formatINR(quote.subtotal)}</span>
-                              </div>
-                              {quote.discountTotal > 0 && (
-                                <div className="flex justify-between text-rose-500 font-medium font-sans">
-                                  <span>Trade Discount:</span>
-                                  <span className="font-mono">- {formatINR(quote.discountTotal)}</span>
-                                </div>
-                              )}
-                              {quote.additionalDiscount && quote.additionalDiscount > 0 ? (
-                                <div className="flex justify-between text-amber-705 font-semibold font-sans">
-                                  <span>Flat Discount:</span>
-                                  <span className="font-mono">- {formatINR(quote.additionalDiscount)}</span>
-                                </div>
-                              ) : null}
-                              {quote.freight && quote.freight > 0 ? (
-                                <div className="flex justify-between text-indigo-700 font-semibold font-sans">
-                                  <span>Freight / Transp.:</span>
-                                  <span className="font-mono">+ {formatINR(quote.freight)}</span>
-                                </div>
-                              ) : null}
-                              <div className="flex justify-between text-slate-650 border-b border-dashed border-slate-200 pb-2 font-bold font-sans">
-                                <span>{isGstEnabled ? "Taxable Net Value:" : "Total Subtotal:"}</span>
-                                <span className="font-mono text-slate-900 font-bold">
-                                  {formatINR(quote.subtotal - quote.discountTotal - (quote.additionalDiscount || 0) + (quote.freight || 0))}
-                                </span>
-                              </div>
-
-                              {isGstEnabled && (isIntrastate ? (
-                                <>
-                                  <div className="flex justify-between text-slate-505">
-                                    <span>CGST Amount:</span>
-                                    <span className="font-mono text-slate-705">{formatINR(quote.cgstTotal)}</span>
-                                  </div>
-                                  <div className="flex justify-between text-slate-505 pb-2 border-b border-slate-200 border-dashed">
-                                    <span>SGST Amount:</span>
-                                    <span className="font-mono text-slate-705">{formatINR(quote.sgstTotal)}</span>
-                                  </div>
-                                </>
-                              ) : (
-                                <div className="flex justify-between text-slate-505 pb-2 border-b border-slate-200 border-dashed">
-                                  <span>IGST Amount:</span>
-                                  <span className="font-mono text-slate-705 font-bold">{formatINR(quote.igstTotal)}</span>
-                                </div>
-                              ))}
-
-                              <div className="flex justify-between text-indigo-900 pt-1.5 items-end">
-                                <span className="uppercase text-[9px] font-black tracking-wider text-indigo-700">Contract Grand Total:</span>
-                                <span className="font-mono text-xl text-indigo-950 font-black leading-none">{formatINR(quote.grandTotal)}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Terms & Conditions - FULL PAGE WIDTH */}
-                          <div className="pt-8 border-t border-slate-200 text-left page-break-inside-avoid space-y-4 w-full">
-                            <span className="text-[10px] font-black tracking-widest text-slate-450 uppercase block font-sans">SECTION II: TERMS, CONDITIONS & SERVICE LEVEL AGREEMENT (SLA)</span>
-                            <div className="leading-relaxed bg-slate-50/50 p-6 rounded-xl border border-slate-200 text-xs text-slate-600 font-sans whitespace-pre-line w-full">
-                              {quote.terms}
-                            </div>
-                          </div>
-
-                          {/* Signatures Area */}
-                          <div className="flex flex-col sm:flex-row justify-between items-end gap-12 pt-12 page-break-inside-avoid font-sans">
-                            <div className="text-left min-w-[220px]">
-                              <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Accepted & Agreed (For Customer)</span>
-                              <div className="h-12 border-b border-dashed border-slate-300 w-48 mt-4"></div>
-                              <div className="text-[10px] text-slate-500 mt-2 font-semibold">Authorized Representative Signature & Date</div>
-                            </div>
-
-                            <div className="text-right min-w-[240px] flex flex-col items-end">
-                              <div className="font-bold text-xs text-slate-855 font-sans">
-                                For {compProfile.name}
-                              </div>
-                              
-                              {compProfile.signatureImage ? (
-                                <div className="w-full flex items-end justify-end mt-2 h-14">
-                                  <img
-                                    src={compProfile.signatureImage}
-                                    alt="Authorized Signature"
-                                    className="max-h-full max-w-full object-contain mix-blend-multiply"
-                                    referrerPolicy="no-referrer"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="h-14"></div>
-                              )}
-                              <div className="text-[10px] text-slate-500 mt-2 font-semibold border-t border-slate-200/80 pt-1 font-sans">Authorized Signatory</div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-
-                    {compProfile.footerImage && (
-                      <tfoot>
-                        <tr>
-                          <td className="p-0 border-none">
-                            <div className="w-full pt-8 mt-auto">
-                              <img
-                                src={compProfile.footerImage}
-                                alt="Footer"
-                                className="w-full h-auto"
-                                referrerPolicy="no-referrer"
-                              />
-                            </div>
-                          </td>
-                        </tr>
-                      </tfoot>
-                    )}
-                  </table>
-                </div>
-              );
-            }
+            const isIntrastate = (client && compProfile) ? client.state.trim().toLowerCase() === compProfile.state.trim().toLowerCase() : true;
 
             return (
-              <div 
-                className="space-y-8 max-w-4xl w-full mx-auto print:space-y-0 print:max-w-none"
-                id="printable-area-container"
-              >
-                {/* -------------------- AMC COVER PAGE SECTION -------------------- */}
-                {isAmcCover && (
-                  <div 
-                    className={`flex flex-col justify-between p-8 sm:p-12 md:p-16 select-none font-sans relative overflow-hidden
-                      ${
-                        coverTheme === "classic-blue" ? "bg-slate-50 text-slate-800" :
-                        coverTheme === "modern-gold" ? "bg-amber-50/20 text-amber-950" :
-                        coverTheme === "tech-dark" ? "bg-slate-950 text-slate-200" :
-                        coverTheme === "corporate-accent" ? "bg-white text-slate-900" :
-                        "bg-white text-slate-950"
-                      } 
-                      w-full rounded-xl border border-slate-300 shadow-xl min-h-[100vh]
-                      print:border-0 print:rounded-none print:shadow-none print:p-10 print:m-0 print:print-cover-page print:w-full`}
-                    style={{ minHeight: "100vh" }}
-                  >
-                    {/* Decorative Corner / Top accents */}
-                    {coverTheme === "classic-blue" && (
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-2xl pointer-events-none" />
-                    )}
-                    {coverTheme === "modern-gold" && (
-                      <div className="absolute top-0 left-0 right-0 h-3 bg-amber-500/80" />
-                    )}
-                    {coverTheme === "tech-dark" && (
-                      <div className="absolute top-0 right-0 w-96 h-96 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
-                    )}
-                    {coverTheme === "minimal-charcoal" && (
-                      <div className="absolute top-0 left-0 w-full h-4 bg-slate-950" />
-                    )}
-                    {coverTheme === "corporate-accent" && (
-                      <>
-                        {/* Top-Right Premium Dark Slate Polygon matching the image layout */}
-                        <div 
-                          className="absolute top-0 right-0 w-[55%] h-[42%] bg-slate-900/95 pointer-events-none"
-                          style={{
-                            clipPath: "polygon(30% 0, 100% 0, 100% 100%, 0 0)",
-                            backgroundImage: "linear-gradient(135deg, #0f172a, #1e293b, #0f172a)"
-                          }}
-                        >
-                          {/* Inner elegant accent light */}
-                          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent" />
-                          <div className="absolute bottom-6 right-6 font-mono text-[9px] text-slate-400 tracking-wider text-right uppercase">
-                            <div>Corporate Document</div>
-                            <div className="text-slate-500 mt-0.5">REF: {quote.quotationNo}</div>
-                          </div>
-                        </div>
-
-                        {/* Bottom-Left Golden-Yellow chevron block matching the image layout */}
-                        <div 
-                          className="absolute left-0 bottom-0 w-[42%] h-[48%] bg-amber-400 pointer-events-none"
-                          style={{
-                            clipPath: "polygon(0 35%, 100% 100%, 45% 100%, 0 65%)"
-                          }}
-                        />
-                        <div 
-                          className="absolute left-0 bottom-0 w-[42%] h-[48%] bg-amber-400/30 pointer-events-none"
-                          style={{
-                            clipPath: "polygon(0 65%, 45% 100%, 0 100%)"
-                          }}
-                        />
-
-                        {/* Thin elegant parallel lines running diagonally at the bottom */}
-                        <div 
-                          className="absolute left-[15%] bottom-[5%] w-[35%] h-[20%] pointer-events-none opacity-40 select-none"
-                          style={{
-                            background: "repeating-linear-gradient(135deg, transparent, transparent 12px, #475569 12px, #475569 13.5px)"
-                          }}
-                        />
-
-                        {/* Years badge in the bottom-left space */}
-                        <div className="absolute left-8 bottom-12 z-10 flex items-center gap-2 font-sans select-none scale-90 origin-left">
-                          <div className="flex flex-col items-center justify-center bg-indigo-650 text-white font-extrabold w-12 h-12 rounded-lg shadow-sm">
-                            <span className="text-lg leading-none">08</span>
-                            <span className="text-[7px] tracking-tight leading-none uppercase">Years</span>
-                          </div>
-                          <div className="text-left leading-none font-sans">
-                            <div className="text-[9px] font-bold text-slate-600 uppercase">of trust &</div>
-                            <div className="text-[10px] font-black text-indigo-750 uppercase">service</div>
-                          </div>
-                        </div>
-
-                        {/* Barcode/QR Code in the bottom right corner */}
-                        <div className="absolute right-8 bottom-12 z-10 flex flex-col items-end gap-1.5 opacity-80 scale-90 origin-right print:opacity-100">
-                          <svg className="w-16 h-16 text-slate-800" viewBox="0 0 100 100" fill="currentColor">
-                            {/* Outer QR box */}
-                            <path d="M0,0 h30 v10 h-20 v20 h-10 z" />
-                            <path d="M70,0 h30 v30 h-10 v-20 h-20 z" />
-                            <path d="M0,70 h10 v20 h20 v10 h-30 z" />
-                            <path d="M100,70 h-10 v20 h-20 v10 h30 z" />
-                            {/* Core QR blocks */}
-                            <rect x="15" y="15" width="20" height="20" />
-                            <rect x="20" y="20" width="10" height="10" fill="white" />
-                            <rect x="65" y="15" width="20" height="20" />
-                            <rect x="70" y="20" width="10" height="10" fill="white" />
-                            <rect x="15" y="65" width="20" height="20" />
-                            <rect x="20" y="70" width="10" height="10" fill="white" />
-                            {/* Styled dots/random squares */}
-                            <rect x="45" y="15" width="8" height="8" />
-                            <rect x="45" y="28" width="8" height="8" />
-                            <rect x="45" y="45" width="10" height="10" />
-                            <rect x="15" y="45" width="8" height="8" />
-                            <rect x="28" y="45" width="8" height="8" />
-                            <rect x="65" y="45" width="8" height="8" />
-                            <rect x="78" y="45" width="8" height="8" />
-                            <rect x="65" y="65" width="8" height="8" />
-                            <rect x="78" y="65" width="8" height="8" />
-                            <rect x="65" y="78" width="8" height="8" />
-                            <rect x="78" y="78" width="8" height="8" />
-                          </svg>
-                          <span className="text-[7px] font-mono tracking-widest text-slate-400">SECURE VERIFIED</span>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Cover Page Header - Full Bleed Width Banner */}
-                    {coverTheme === "corporate-accent" ? (
-                      <div className="flex justify-between items-start z-10">
-                        <div className="flex items-center gap-3">
-                          {compProfile.headerImage ? (
-                            <img 
-                              src={compProfile.headerImage} 
-                              alt="Company Logo" 
-                              className="w-12 h-12 object-contain rounded-lg" 
-                              referrerPolicy="no-referrer"
-                            />
-                          ) : (
-                            <div className="p-2.5 bg-indigo-650 text-white rounded-xl shadow-sm">
-                              <FileCheck2 className="w-6 h-6 text-white" />
-                            </div>
-                          )}
-                          <div className="text-left font-sans">
-                            <span className="block font-sans font-black text-lg tracking-tight text-slate-800 leading-tight">
-                              {compProfile.name}
-                            </span>
-                            <span className="block text-[9px] text-slate-400 font-mono tracking-widest uppercase mt-0.5">
-                              DELIVERING EXCELLENCE & VALUE
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ) : compProfile.headerImage ? (
-                      <div className="-mx-8 sm:-mx-12 md:-mx-16 -mt-8 sm:-mt-12 md:-mt-16 print:-mx-10 print:-mt-10 mb-8 overflow-hidden h-48 sm:h-56 print:h-64 relative rounded-t-2xl print:rounded-none shadow-sm">
-                        <img 
-                          src={compProfile.headerImage} 
-                          alt="Cover Page Header Image" 
-                          className="w-full h-full object-cover" 
-                          referrerPolicy="no-referrer" 
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/40 to-transparent flex flex-col justify-end p-6 print:p-10 select-none">
-                          <div className="flex justify-between items-end">
-                            <div>
-                              <div className="text-amber-500 text-[10px] uppercase font-black tracking-widest mb-1">PROPOSAL BY</div>
-                              <span className="font-sans font-extrabold text-lg sm:text-2xl text-white tracking-tight drop-shadow-sm">
-                                {compProfile.name}
-                              </span>
-                            </div>
-                            <div className="text-right font-mono text-[9px] sm:text-[10px] text-slate-200 opacity-90">
-                              <div>REF: {quote.quotationNo}</div>
-                              <div>DATE: {formatDate(quote.date)}</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className={`-mx-8 sm:-mx-12 md:-mx-16 -mt-8 sm:-mt-12 md:-mt-16 print:-mx-10 print:-mt-10 mb-8 h-32 print:h-40 flex items-center justify-between px-8 sm:px-12 md:px-16 print:px-10 relative overflow-hidden select-none rounded-t-2xl print:rounded-none ${
-                        coverTheme === "classic-blue" ? "bg-gradient-to-r from-indigo-700 to-indigo-900 text-white" :
-                        coverTheme === "modern-gold" ? "bg-gradient-to-r from-amber-700 to-amber-900 text-white" :
-                        coverTheme === "tech-dark" ? "bg-gradient-to-r from-slate-900 to-teal-950 text-white border-b border-teal-500/20" :
-                        "bg-slate-950 text-white"
-                      }`}>
-                        <div className="flex items-center gap-3 z-10">
-                          <div className="p-2 bg-white/10 rounded-lg">
-                            <FileCheck2 className="w-5 h-5 text-white" />
-                          </div>
-                          <span className="font-sans font-bold text-xl tracking-tight">
-                            {compProfile.name}
-                          </span>
-                        </div>
-                        <div className="text-right font-mono text-[10px] opacity-80 z-10">
-                          <div>REF: {quote.quotationNo}</div>
-                          <div>DATE: {formatDate(quote.date)}</div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Cover Page Main Content Box */}
-                    <div className={`my-auto py-12 text-left z-10 ${coverTheme === "corporate-accent" ? "pl-0 sm:pl-4 space-y-8" : "text-center sm:text-left space-y-6"}`}>
-                      {coverTheme === "corporate-accent" ? (
-                        <div className="space-y-4">
-                          <div className="space-y-0.5 select-none uppercase tracking-tighter">
-                            <span className="block font-sans font-extrabold text-amber-500 text-4xl sm:text-5xl md:text-6xl tracking-wide leading-none">
-                              Business
-                            </span>
-                            <span className="block font-sans font-black text-slate-900 text-5xl sm:text-6xl md:text-7xl tracking-tight leading-none">
-                              Proposal
-                            </span>
-                            <span className="block font-sans font-extrabold text-slate-800 text-5xl sm:text-6xl md:text-7xl tracking-tight leading-none">
-                              {new Date(quote.date).getFullYear()}
-                            </span>
-                          </div>
-
-                          <div className="text-left pt-6 max-w-sm">
-                            <div className="text-[10px] font-black tracking-widest text-slate-450 uppercase">PLACE YOUR TEXT HERE</div>
-                            <p className="text-[11px] text-slate-500 leading-relaxed mt-2 whitespace-normal font-sans">
-                              {quote.items.some(item => item.productName.toLowerCase().includes("amc") || item.productName.toLowerCase().includes("maintenance"))
-                                ? "This document represents a formal annual maintenance contract (AMC) proposal including service level agreement (SLA) terms for corporate IT support and infrastructure maintenance."
-                                : "This commercial quotation outlines premium product supply, deployment specifications, pricing breakdowns, and business collaboration terms customized for your corporate infrastructure."
-                              }
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <div className={`inline-block px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest ${
-                            coverTheme === "classic-blue" ? "bg-indigo-100 text-indigo-800" :
-                            coverTheme === "modern-gold" ? "bg-amber-100 text-amber-850" :
-                            coverTheme === "tech-dark" ? "bg-teal-50/10 text-teal-400 border border-teal-500/30" :
-                            "bg-slate-950 text-white"
-                          }`}>
-                            Formal Proposal & SLA Contract
-                          </div>
-
-                          <h1 className={`font-sans font-black tracking-tight leading-none ${
-                            coverTheme === "classic-blue" ? "text-slate-900 text-4xl sm:text-5xl" :
-                            coverTheme === "modern-gold" ? "text-amber-900 text-4xl sm:text-5xl font-serif italic" :
-                            coverTheme === "tech-dark" ? "text-white text-4xl sm:text-5xl font-mono uppercase" :
-                            "text-slate-950 text-5xl sm:text-6xl font-sans tracking-tighter uppercase"
-                          }`}>
-                            {quote.items.some(item => item.productName.toLowerCase().includes("amc") || item.productName.toLowerCase().includes("maintenance")) 
-                              ? <>Annual Maintenance <br className="hidden sm:inline" /> Contract Proposal</> 
-                              : <>Commercial <br className="hidden sm:inline" /> Quotation Proposal</>
-                            }
-                          </h1>
-                          
-                          <p className={`text-sm max-w-xl leading-relaxed ${coverTheme === "tech-dark" ? "text-slate-400" : "text-slate-600"}`}>
-                            {quote.items.some(item => item.productName.toLowerCase().includes("amc") || item.productName.toLowerCase().includes("maintenance"))
-                              ? "This contract ensures proactive maintenance, rapid-response service levels (SLAs), and certified hardware/software engineering services tailored specifically for your corporate infrastructure."
-                              : "This document contains the commercial proposal, pricing breakdown, and delivery terms customized for your business requirements. We look forward to a successful collaboration."
-                            }
-                          </p>
-
-                          <div className={`w-32 h-1 rounded-full ${
-                            coverTheme === "classic-blue" ? "bg-indigo-600" :
-                            coverTheme === "modern-gold" ? "bg-amber-500" :
-                            coverTheme === "tech-dark" ? "bg-teal-400" :
-                            "bg-slate-950"
-                          }`} />
-                        </>
-                      )}
-                    </div>
-
-                    {/* Metadata Parties Layout */}
-                    <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 text-left text-xs leading-relaxed z-10 ${
-                      coverTheme === "corporate-accent" 
-                        ? "border-t border-slate-150 text-slate-700 bg-slate-50/40 p-5 rounded-xl backdrop-blur-sm max-w-2xl" 
-                        : "border-t border-slate-200/65"
-                    }`}>
-                      {/* Prepared For (Client) */}
-                      <div className="space-y-2">
-                        <span className={`block text-[10px] font-extrabold uppercase tracking-wider ${
-                          coverTheme === "classic-blue" ? "text-indigo-600" :
-                          coverTheme === "modern-gold" ? "text-amber-700" :
-                          coverTheme === "tech-dark" ? "text-teal-400 font-mono" :
-                          "text-slate-500"
-                        }`}>
-                          Prepared For (The Client)
-                        </span>
-                        <div>
-                          <div className={`font-bold text-sm ${coverTheme === "tech-dark" ? "text-white" : "text-slate-900"}`}>
-                            {client?.company || "N/A"}
-                          </div>
-                          <div className="opacity-80 mt-1 whitespace-pre-line">{client?.billingAddress}</div>
-                          <div className="mt-2 text-[11px]">
-                            <span className="opacity-60 font-sans">Representative:</span> <span className="font-semibold">{client?.name || "N/A"}</span>
-                          </div>
-                          {client?.gstin && (
-                            <div className="text-[10px] font-mono opacity-70">GSTIN: {client.gstin}</div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Prepared By (Service Provider) */}
-                      <div className="space-y-2">
-                        <span className={`block text-[10px] font-extrabold uppercase tracking-wider ${
-                          coverTheme === "classic-blue" ? "text-indigo-600" :
-                          coverTheme === "modern-gold" ? "text-amber-700" :
-                          coverTheme === "tech-dark" ? "text-teal-400 font-mono" :
-                          "text-slate-500"
-                        }`}>
-                          Prepared By (The Provider)
-                        </span>
-                        <div>
-                          <div className={`font-bold text-sm ${coverTheme === "tech-dark" ? "text-white" : "text-slate-900"}`}>
-                            {compProfile.name}
-                          </div>
-                          <div className="opacity-80 mt-1">{compProfile.address || "N/A"}</div>
-                          <div className="mt-2 text-[11px] space-y-0.5 font-sans">
-                            <div><span className="opacity-60">Contact Support:</span> <span className="font-semibold">{compProfile.phone || "N/A"}</span></div>
-                            <div><span className="opacity-60">Corporate Email:</span> <span className="font-semibold">{compProfile.email || "N/A"}</span></div>
-                          </div>
-                          {compProfile.gstin && (
-                            <div className="text-[10px] font-mono opacity-70 mt-1">GSTIN: {compProfile.gstin}</div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Cover Page Footer block */}
-                    <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-4 border-slate-200/40 text-[9px] opacity-60 font-mono z-10">
-                      <div>CONFIDENTIAL & PROPRIETARY DOCUMENT</div>
-                      <div>VALID UNTIL: {formatDate(quote.validUntil)}</div>
-                      <div>© {new Date().getFullYear()} {compProfile.name}. ALL RIGHTS RESERVED.</div>
-                    </div>
-
-                    {/* Footer Image on Cover Page */}
-                    {compProfile.footerImage && (
-                      <div className="w-full mt-4 print:hidden z-10">
-                        <img
-                          src={compProfile.footerImage}
-                          alt="Footer Image"
-                          className="w-full h-auto max-h-16 object-contain"
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-
+              <div className="bg-white text-slate-900 p-8 sm:p-12 rounded-xl border border-slate-300 shadow-xl space-y-8 flex flex-col font-sans max-w-4xl mx-auto ring-1 ring-black/5 min-h-[100vh] print:min-h-[100vh]" id="printable-area-container">
                 {/* Printable Styles for Browser */}
 
-                {/* Main Quotation Sheet Card */}
-                <div className="w-full rounded-xl border border-slate-300 shadow-xl p-8 sm:p-12 md:p-16 bg-white text-slate-900 flex flex-col font-sans print:border-0 print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full">
-                  <table className="w-full border-collapse">
-                  <thead className="print:table-header-group">
+                <table className="w-full border-collapse">
+                  <thead>
                     <tr>
-                      <td className="p-0 border-none font-normal text-left">
+                      <th className="p-0 border-none">
                         {compProfile.headerImage && (
-                          <div className="w-full mb-6">
+                          <div className="w-full mb-4">
                             <img 
                               src={compProfile.headerImage} 
                               alt="Header" 
-                              className="w-full h-auto rounded-t-xl print:rounded-none" 
+                              className="w-full h-auto" 
                               referrerPolicy="no-referrer"
                             />
                           </div>
                         )}
-                        {isAmcCover ? (
-                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4 border-b border-slate-200 mb-8 text-left">
-                            <div>
-                              <span className="text-[10px] font-black tracking-widest text-indigo-600 uppercase">SERVICE AGREEMENT PROPOSAL</span>
-                              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
-                                ANNUAL MAINTENANCE CONTRACT
-                              </h1>
-                              <p className="text-xs text-slate-500 mt-1">Formal Quotation & SLA Terms</p>
-                            </div>
-                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs font-medium space-y-1 min-w-[200px]">
-                              <div className="flex justify-between gap-4">
-                                <span className="text-slate-450 uppercase text-[9px] font-bold">Proposal No:</span>
-                                <span className="font-mono font-bold text-slate-800">{quote.quotationNo}</span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span className="text-slate-450 uppercase text-[9px] font-bold">Proposal Date:</span>
-                                <span className="text-slate-700 font-bold">{formatDate(quote.date)}</span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span className="text-slate-450 uppercase text-[9px] font-bold">Valid Until:</span>
-                                <span className="text-slate-700 font-bold">{formatDate(quote.validUntil)}</span>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex justify-between items-center py-2 border-b border-slate-200 mb-4">
-                             <h1 className="text-2xl font-bold uppercase">Quotation</h1>
-                             <div className="text-xs text-right font-mono">
-                                <div>No: {quote.quotationNo}</div>
-                                <div>Date: {formatDate(quote.date)}</div>
-                             </div>
-                          </div>
-                        )}
-                      </td>
+                        <div className="flex justify-between items-center py-2 border-b border-slate-200">
+                           <h1 className="text-2xl font-bold uppercase">Quotation</h1>
+                           <div className="text-xs">
+                              <div>No: {quote.quotationNo}</div>
+                              <div>Date: {formatDate(quote.date)}</div>
+                           </div>
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   
@@ -2066,7 +1373,7 @@ export default function QuotationsView({
                     <tr>
                       <td className="p-0 border-none">
                         {/* Client / Customer Party Info */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 text-xs leading-relaxed text-left mb-0 pb-0">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 text-xs leading-relaxed text-left">
                           <div className="space-y-1">
                             <h3 className="font-bold text-slate-500 uppercase tracking-wider select-none text-[10px]">To Company (Consignee)</h3>
                             <div className="font-bold text-sm text-slate-800">{client?.company || "N/A"}</div>
@@ -2074,7 +1381,7 @@ export default function QuotationsView({
                               {client?.billingAddress || "N/A"}
                             </div>
                             <div>Attn Check: <span className="font-semibold text-slate-800">{client?.name || "N/A"}</span></div>
-                            <div>Contact Call: <span className="font-semibold text-slate-855 font-mono">{client?.phone || "N/A"}</span></div>
+                            <div>Contact Call: <span className="font-semibold text-slate-850 font-mono">{client?.phone || "N/A"}</span></div>
                           </div>
 
                           <div className="space-y-1">
@@ -2086,22 +1393,19 @@ export default function QuotationsView({
                           </div>
                         </div>
 
-                        {/* Solid spacer of exactly 0.25 inches */}
-                        <div style={{ height: "0.25in" }} className="w-full clear-both select-none pointer-events-none" />
-
                         {/* Products / Items Catalogue billing table */}
-                        <div className="overflow-x-auto ring-1 ring-slate-150 rounded-lg mt-0 mb-8">
+                        <div className="overflow-x-auto ring-1 ring-slate-150 rounded-lg">
                           <table className="w-full text-left text-xs text-slate-700 min-w-[650px] border-collapse">
                             <thead>
                               <tr className="bg-slate-50 text-slate-700 border-b border-slate-200 uppercase text-[9px] font-black tracking-wider text-left">
                                 <th className="py-3 px-4 text-center">#</th>
-                                <th className="py-3 px-4 max-w-sm">{isAmcCover ? "Service description / AMC Scope" : "Products and Services"}</th>
+                                <th className="py-3 px-4 max-w-sm">Products and Services</th>
                                 <th className="py-3 px-3 text-center">HSN Code</th>
                                 <th className="py-3 px-3 text-center">Qty</th>
                                 <th className="py-3 px-3 text-right">Rate</th>
                                 <th className="py-3 px-3 text-center">Discount</th>
-                                {isGstEnabled && <th className="py-3 px-3 text-center">Gst Rate</th>}
-                                <th className="py-3 px-4 text-right">{isGstEnabled ? "Taxable Basic Value" : "Amount"}</th>
+                                <th className="py-3 px-3 text-center">Gst Rate</th>
+                                <th className="py-3 px-4 text-right">Taxable Basic Value</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 text-slate-600 text-left">
@@ -2130,11 +1434,9 @@ export default function QuotationsView({
                                     <td className="py-3 px-3 text-center font-mono font-semibold text-rose-500">
                                       {item.discountPercent > 0 ? `${item.discountPercent}%` : "-"}
                                     </td>
-                                    {isGstEnabled && (
-                                      <td className="py-3 px-3 text-center font-semibold font-mono text-indigo-600">
-                                        {item.gstPercent}%
-                                      </td>
-                                    )}
+                                    <td className="py-3 px-3 text-center font-semibold font-mono text-indigo-600">
+                                      {item.gstPercent}%
+                                    </td>
                                     <td className="py-3 px-4 text-right font-bold text-slate-800 font-mono">
                                       {formatINR(finalVal)}
                                     </td>
@@ -2153,7 +1455,7 @@ export default function QuotationsView({
                               Standard Remittance Details (RTGS/NEFT/IMPS)
                             </span>
                             <div className="grid grid-cols-3 gap-y-1">
-                              <span className="text-slate-550 font-sans">Bank Name:</span>
+                              <span className="text-slate-500 font-sans">Bank Name:</span>
                               <span className="col-span-2 font-bold text-slate-800">{compProfile.bankName}</span>
                               
                               <span className="text-slate-550">Branch Name:</span>
@@ -2192,14 +1494,14 @@ export default function QuotationsView({
                               </div>
                             ) : null}
                             <div className="flex justify-between text-slate-600 border-b border-dashed border-slate-200 pb-1.5 font-bold">
-                              <span>{isGstEnabled ? "Taxable Value (Net):" : "Subtotal:"}</span>
+                              <span>Taxable Value (Net):</span>
                               <span className="font-mono text-slate-900 font-bold">
                                 {formatINR(quote.subtotal - quote.discountTotal - (quote.additionalDiscount || 0) + (quote.freight || 0))}
                               </span>
                             </div>
 
                             {/* Tax split indicator */}
-                            {isGstEnabled && (isIntrastate ? (
+                            {isIntrastate ? (
                               <>
                                 <div className="flex justify-between text-slate-500">
                                   <span>Central GST (CGST component):</span>
@@ -2215,7 +1517,7 @@ export default function QuotationsView({
                                 <span>Integrated GST (IGST total):</span>
                                 <span className="font-mono text-slate-705 font-bold">{formatINR(quote.igstTotal)}</span>
                               </div>
-                            ))}
+                            )}
 
                             <div className="flex justify-between text-indigo-900 font-sans font-black text-sm pt-1.5 leading-none">
                               <span className="uppercase text-[10px] tracking-wider text-indigo-700">Invoice Grand Total:</span>
@@ -2225,88 +1527,48 @@ export default function QuotationsView({
                         </div>
                         
                         {/* Scope terms & clauses signature area */}
-                        <div className="pt-8 border-t border-slate-200 leading-normal text-[11px] text-left page-break-inside-avoid space-y-6">
-                          {/* Full width terms list */}
-                          <div className="text-left space-y-2 whitespace-pre-line text-[#5c657a] w-full">
-                            <div className="font-extrabold text-[#3e485e] uppercase tracking-wider text-[10px] select-none mb-2 pb-1 border-b border-slate-150">
-                              Terms and Conditions of Proposal
-                            </div>
-                            <div className="leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs text-slate-600 font-sans">
-                              {quote.terms}
-                            </div>
+                        <div className="grid grid-cols-2 gap-8 pt-8 border-t border-slate-200 leading-normal text-[11px] text-left page-break-inside-avoid">
+                          {/* Left terms list */}
+                          <div className="text-left space-y-2 whitespace-pre-line text-[#5c657a]">
+                            <div className="font-bold text-[#3e485e] uppercase tracking-wider text-[10px] select-none mb-3">Terms and Conditions of Proposal</div>
+                            <div className="leading-relaxed">{quote.terms}</div>
                           </div>
 
-                          {/* Signature Layout: Client acceptance & Service Provider side-by-side */}
-                          <div className="flex flex-col sm:flex-row justify-between items-end gap-8 pt-4">
-                            <div className="text-left min-w-[200px]">
-                              <div className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider">Accepted & Agreed By (The Client)</div>
-                              <div className="h-10 border-b border-dashed border-slate-300 w-48 mt-4"></div>
-                              <div className="text-[10px] text-slate-500 mt-2 font-semibold">Authorized Signature & Date</div>
+                          {/* Right Signoff box */}
+                          <div className="text-right space-y-4 select-none flex flex-col items-end">
+                            <div className="font-semibold text-[13px] text-[#3e485e]">
+                              For {compProfile.name}
                             </div>
-
-                            <div className="text-right min-w-[240px] flex flex-col items-end">
-                              <div className="font-extrabold text-xs text-[#3e485e]">
-                                For {compProfile.name}
+                            
+                            {compProfile.signatureImage && (
+                               <div className="w-full flex items-end justify-end mt-4">
+                                <img
+                                  src={compProfile.signatureImage}
+                                  alt="Authorized Signature"
+                                  className="max-h-[80px] max-w-full object-contain mix-blend-multiply"
+                                  referrerPolicy="no-referrer"
+                                />
                               </div>
-                              
-                              {compProfile.signatureImage && (
-                                 <div className="w-full flex items-end justify-end mt-2">
-                                  <img
-                                    src={compProfile.signatureImage}
-                                    alt="Authorized Signature"
-                                    className="max-h-[70px] max-w-full object-contain mix-blend-multiply"
-                                    referrerPolicy="no-referrer"
-                                  />
-                                </div>
-                              )}
-                              <div className="text-[10px] text-slate-500 mt-2 font-semibold">Authorized Signatory</div>
-                            </div>
+                            )}
                           </div>
-                          
                         </div>
+                        {compProfile.footerImage && (
+                          <div className="w-full mt-8">
+                            <img
+                              src={compProfile.footerImage}
+                              alt="Footer"
+                              className="w-full h-auto"
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                        )}
                       </td>
                     </tr>
                   </tbody>
-
-                  {compProfile.footerImage && (
-                    <tfoot className="hidden print:table-footer-group">
-                      <tr>
-                        <td className="p-0 border-none">
-                          {/* Reserve exact space for the fixed footer on print */}
-                          <div style={{ height: "1.1in" }} className="w-full clear-both" />
-                        </td>
-                      </tr>
-                    </tfoot>
-                  )}
                 </table>
-
-                {/* For Print: Fixed at the very bottom of every page */}
-                {compProfile.footerImage && (
-                  <div className="hidden print:block" style={{ position: "fixed", bottom: "0.4in", left: "0.50in", right: "0.30in", zIndex: 50 }}>
-                    <img
-                      src={compProfile.footerImage}
-                      alt="Footer"
-                      className="w-full h-auto object-contain mix-blend-multiply block"
-                      referrerPolicy="no-referrer"
-                    />
                   </div>
-                )}
-
-                {/* For Screen View: Render at the end of the document content */}
-                {compProfile.footerImage && (
-                  <div className="w-full pt-8 mt-12 print:hidden">
-                    <img
-                      src={compProfile.footerImage}
-                      alt="Footer"
-                      className="w-full h-auto object-contain mix-blend-multiply block"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-                )}
-                </div> {/* Close the main quotation sheet card wrapper */}
-              </div>
-            );
-          })()}
+                );
+              })()}
 
 
 

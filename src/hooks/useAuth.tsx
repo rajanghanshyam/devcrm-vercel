@@ -16,79 +16,22 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const FALLBACK_USERS: User[] = [
-  {
-    id: "admin_default",
-    name: "System Administrator",
-    email: "admin@application.local",
-    password: "pass",
-    role: "Admin" as any,
-    isActive: true,
-    rights: {
-      dashboard: true,
-      quotations: true,
-      proforma: true,
-      challans: true,
-      leads: true,
-      customers: true,
-      products: true,
-      inventory: true,
-      subscriptions: true,
-      reminders: true,
-      amazonSeller: true,
-      catalogues: true,
-      settings: true
-    }
-  },
-  {
-    id: "rajan_default",
-    name: "Rajan Ghanshyam",
-    email: "rajan@devinfotech.net",
-    password: "Devansh@2007",
-    role: "Admin" as any,
-    isActive: true,
-    rights: {
-      dashboard: true,
-      quotations: true,
-      proforma: true,
-      challans: true,
-      leads: true,
-      customers: true,
-      products: true,
-      inventory: true,
-      subscriptions: true,
-      reminders: true,
-      amazonSeller: true,
-      catalogues: true,
-      settings: true
-    }
-  }
-];
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load all users from the backend with local fallback support
+  // Load all users from the backend
   const refreshUsers = async () => {
     try {
       const res = await fetch("/api/users");
-      if (!res.ok) {
-        throw new Error(`HTTP error! Status: ${res.status}`);
-      }
       const data = await res.json();
-      if (data.success && data.users && data.users.length > 0) {
+      if (data.success) {
         setUsers(data.users || []);
         return data.users;
-      } else {
-        setUsers(FALLBACK_USERS);
-        return FALLBACK_USERS;
       }
     } catch (err) {
-      console.warn("Error fetching user list, using local fallback users:", err);
-      setUsers(FALLBACK_USERS);
-      return FALLBACK_USERS;
+      console.error("Error fetching user list:", err);
     }
   };
 
@@ -115,10 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.removeItem("qm_logged_in_user");
         }
       } else {
-        // Auto-login default admin in dev/fallback for smoother onboarding if no session exists
-        const defaultAdm = loadedUsers?.find((u: any) => u.id === "admin_default") || FALLBACK_USERS[0];
-        setUser(defaultAdm);
-        localStorage.setItem("qm_logged_in_user", JSON.stringify(defaultAdm));
+        setUser(null);
       }
       setLoading(false);
     };
@@ -133,9 +73,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password: password || "" })
       });
-      if (!res.ok) {
-        throw new Error(`HTTP error! Status: ${res.status}`);
-      }
       const data = await res.json();
       if (!data.success) {
         throw new Error(data.error || "Login failed");
@@ -146,20 +83,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await refreshUsers();
       return true;
     } catch (err: any) {
-      console.warn("Server login failed, attempting local fallback validation:", err);
-      const matched = FALLBACK_USERS.find(
-        (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === (password || "")
-      );
-      if (matched) {
-        if (!matched.isActive) {
-          throw new Error("This user account is inactive");
-        }
-        setUser(matched);
-        localStorage.setItem("qm_logged_in_user", JSON.stringify(matched));
-        setUsers(FALLBACK_USERS);
+      console.error("Custom Login Error:", err);
+      // For fallback/offline resilience, allow auto login
+      const matchedLocal = users.find(u => (u.email || "").toLowerCase() === (email || "").toLowerCase());
+      if (matchedLocal) {
+        setUser(matchedLocal);
+        localStorage.setItem("qm_logged_in_user", JSON.stringify(matchedLocal));
         return true;
       }
-      throw new Error(err.message || "Incorrect email address or password");
+      throw err;
     }
   };
 

@@ -26,7 +26,6 @@ export default function ChallanView({
 }: ChallanViewProps) {
   
   const [searchTerm, setSearchTerm] = useState("");
-  const [companyFilter, setCompanyFilter] = useState("All");
   const [activeSubView, setActiveSubView] = useState<"list" | "detail" | "create">("list");
   const [activeChallanId, setActiveChallanId] = useState<string | null>(null);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -68,8 +67,7 @@ export default function ChallanView({
       ifsc: companySettings.ifsc,
       headerImage: companySettings.headerImage,
       footerImage: companySettings.footerImage,
-      termsPresets: [],
-      enableGst: companySettings.enableGst
+      termsPresets: []
     };
   };
 
@@ -186,14 +184,12 @@ export default function ChallanView({
   const filteredChallans = challans.filter((c) => {
     const client = customers.find(cust => cust.id === c.customerId);
     const compName = client ? client.company : "";
-    const matchesSearch = (
+    return (
       (c.challanNo || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (c.vehicleNo || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (c.transporter || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (compName || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
-    const matchesCompany = companyFilter === "All" || c.companyId === companyFilter;
-    return matchesSearch && matchesCompany;
   });
 
   return (
@@ -214,30 +210,16 @@ export default function ChallanView({
             </button>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4 bg-white p-3.5 rounded-xl border border-slate-200 font-sans shadow-sm">
+          <div className="flex bg-white p-3.5 rounded-xl border border-slate-200 font-sans shadow-sm">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search by Challan No, transporter, vehicle registration or destination..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-10 pr-4 text-slate-800 text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none placeholder:text-slate-400 focus:border-indigo-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-10 pr-4 text-slate-800 text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none placeholder:text-slate-400"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-            </div>
-            
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Company:</span>
-              <select
-                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:ring-1 focus:ring-indigo-500 focus:outline-none focus:border-indigo-500 max-w-[200px]"
-                value={companyFilter}
-                onChange={(e) => setCompanyFilter(e.target.value)}
-              >
-                <option value="All">All Companies</option>
-                {companyProfiles.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
             </div>
           </div>
 
@@ -647,7 +629,7 @@ export default function ChallanView({
                 </div>
 
                 {/* Shipping locations address */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 text-xs text-left leading-relaxed mb-0 pb-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 text-xs text-left leading-relaxed">
                   <div>
                     <h3 className="font-bold text-slate-400 uppercase text-[10px] tracking-widest mb-1">Company Details (Sender)</h3>
                     <div className="font-bold text-slate-800">{compProfile.name}</div>
@@ -663,11 +645,8 @@ export default function ChallanView({
                   </div>
                 </div>
 
-                {/* Solid spacer of exactly 0.25 inches */}
-                <div style={{ height: "0.25in" }} className="w-full clear-both select-none pointer-events-none" />
-
                 {/* Items checklist */}
-                <div className="overflow-x-auto ring-1 ring-slate-150 rounded-lg mt-0 mb-8">
+                <div className="overflow-x-auto ring-1 ring-slate-150 rounded-lg">
                   <table className="w-full text-left text-xs text-slate-700 min-w-[600px] border-collapse bg-transparent">
                     <thead>
                       <tr className="bg-slate-50 text-slate-700 border-b border-slate-200 uppercase text-[9px] font-black tracking-wider text-left">
@@ -735,41 +714,24 @@ export default function ChallanView({
                     </tr>
                   </tbody>
 
-                  {compProfile.footerImage && (
-                    <tfoot className="hidden print:table-footer-group">
-                      <tr>
-                        <td className="p-0 border-none">
-                          {/* Reserve exact space for the fixed footer on print */}
-                          <div style={{ height: "1.1in" }} className="w-full clear-both" />
-                        </td>
-                      </tr>
-                    </tfoot>
-                  )}
+                  <tfoot className="print:table-footer-group">
+                    <tr>
+                      <td className="p-0 border-none print:pb-0">
+                        {/* Footer Stamp - Full Width */}
+                        {compProfile.footerImage && (
+                          <div className="w-full flex items-end justify-center mt-auto">
+                            <img 
+                              src={compProfile.footerImage} 
+                              alt="Official Stamp" 
+                              className="w-full h-auto object-contain mix-blend-multiply block" 
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
-
-                {/* For Print: Fixed at the very bottom of every page */}
-                {compProfile.footerImage && (
-                  <div className="hidden print:block" style={{ position: "fixed", bottom: "0.4in", left: "0.50in", right: "0.30in", zIndex: 50 }}>
-                    <img
-                      src={compProfile.footerImage}
-                      alt="Official Stamp"
-                      className="w-full h-auto object-contain mix-blend-multiply block"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-                )}
-
-                {/* For Screen View: Render at the end of the document content */}
-                {compProfile.footerImage && (
-                  <div className="w-full pt-8 mt-12 print:hidden">
-                    <img
-                      src={compProfile.footerImage}
-                      alt="Official Stamp"
-                      className="w-full h-auto object-contain mix-blend-multiply block"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-                )}
               </div>
             );
           })()}

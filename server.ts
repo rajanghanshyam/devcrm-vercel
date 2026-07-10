@@ -1,50 +1,14 @@
-import "./src/env";
-
 import express from "express";
 import path from "path";
+import { createServer as createViteServer } from "vite";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { prisma } from "./src/db";
 import { performSchemaMigrationCheck } from "./src/schemaCheck";
-import { saveToPrisma, getFromPrisma } from "./src/dbHelper";
+import { saveToPrisma, getFromPrisma } from "./src/dbSync";
 
 dotenv.config();
-
-export function formatDbErrorMessage(msg: string): string {
-  if (msg === "DB_NOT_CONFIGURED") {
-    return "Your DATABASE_URL environment variable is not configured. Please set DATABASE_URL in Google AI Studio Settings -> Environment Variables menu to persist data.";
-  }
-  if (msg === "DB_MASKED") {
-    return "CRITICAL DATABASE CONFIGURATION ERROR: Your DATABASE_URL contains '******' (the masked/hidden password placeholder) instead of your actual database password.\n\n" +
-      "To resolve this:\n" +
-      "1. Locate your database credentials or Connection String details.\n" +
-      "2. Make sure you use the actual password instead of '******'.\n" +
-      "3. Copy the complete connection string containing your actual unmasked password.\n" +
-      "4. Open Google AI Studio, click the 'Settings' menu in the sidebar, open 'Environment Variables', and update 'DATABASE_URL' and 'DATABASE_URL_UNPOOLED' with your correct unmasked connection string.";
-  }
-  return msg;
-}
-
-export function isDbConnectionOrSchemaError(error: any): boolean {
-  if (!error) return false;
-  const msg = (error.message || String(error)).toLowerCase();
-  return (
-    msg.includes("db_not_configured") ||
-    msg.includes("db_masked") ||
-    msg.includes("relation") ||
-    msg.includes("does not exist") ||
-    msg.includes("42p01") ||
-    msg.includes("table") ||
-    msg.includes("connection failed") ||
-    msg.includes("connect") ||
-    msg.includes("is not defined") ||
-    msg.includes("password") ||
-    msg.includes("pool") ||
-    msg.includes("serverless startup seeding failed") ||
-    msg.includes("prisma")
-  );
-}
 
 // Initialize Google GenAI lazily
 let aiInstance: GoogleGenAI | null = null;
@@ -171,685 +135,20 @@ app.post("/api/db/save", async (req, res) => {
     await saveToPrisma(payload);
     res.json({ success: true, message: "Database saved to Prisma models successfully!" });
   } catch (error: any) {
-    if (isDbConnectionOrSchemaError(error)) {
-      console.log("[Database] Database is unconfigured, masked, or unmigrated. Sandbox offline mode active.");
-      res.json({ success: true, message: "Database save bypassed (operating in sandbox offline mode)", isFallbackMode: true });
-    } else {
-      console.error("CRITICAL error in Prisma save endpoint:", error);
-      res.status(500).json({ success: false, error: error.message });
-    }
-  }
-});
-
-// Direct granular single-entry save endpoint (deprecated and removed in favor of /api/db/save batch updates)
-app.post("/api/save-entry", async (req, res) => {
-  return res.json({ success: true, message: "Bypassed (direct save removed)" });
-  // Dead code starts here for safety/no-op
-  const { model, data } = req.body;
-  if (!model || !data || !data.id) {
-    return res.status(400).json({ success: false, error: "Model, data, and data.id are required" });
-  }
-
-  try {
-    console.log(`Direct entry save requested: model=${model}, id=${data.id}`);
-
-    if (model === "company_profiles") {
-      await prisma.termsPresets.deleteMany({ where: { companyProfileId: data.id } });
-      await prisma.companyProfiles.upsert({
-        where: { id: data.id },
-        update: {
-          name: data.name,
-          email: data.email || "",
-          phone: data.phone,
-          address: data.address,
-          gstin: data.gstin,
-          pan: data.pan,
-          state: data.state,
-          bankName: data.bankName,
-          bankBranch: data.bankBranch,
-          accountNo: data.accountNo,
-          ifsc: data.ifsc,
-          headerImage: data.headerImage,
-          footerImage: data.footerImage,
-          signatureImage: data.signatureImage,
-          template: data.template,
-          quotationPrefix: data.quotationPrefix,
-          invoicePrefix: data.invoicePrefix,
-          challanPrefix: data.challanPrefix,
-          nextQuotationNumber: data.nextQuotationNumber || 1,
-          nextInvoiceNumber: data.nextInvoiceNumber || 1,
-          nextChallanNumber: data.nextChallanNumber || 1,
-          enableGst: data.enableGst !== undefined ? data.enableGst : true,
-          profitWithoutGst: data.profitWithoutGst !== undefined ? data.profitWithoutGst : true,
-          updatedAt: new Date()
-        },
-        create: {
-          id: data.id,
-          name: data.name,
-          email: data.email || "",
-          phone: data.phone,
-          address: data.address,
-          gstin: data.gstin,
-          pan: data.pan,
-          state: data.state,
-          bankName: data.bankName,
-          bankBranch: data.bankBranch,
-          accountNo: data.accountNo,
-          ifsc: data.ifsc,
-          headerImage: data.headerImage,
-          footerImage: data.footerImage,
-          signatureImage: data.signatureImage,
-          template: data.template,
-          quotationPrefix: data.quotationPrefix,
-          invoicePrefix: data.invoicePrefix,
-          challanPrefix: data.challanPrefix,
-          nextQuotationNumber: data.nextQuotationNumber || 1,
-          nextInvoiceNumber: data.nextInvoiceNumber || 1,
-          nextChallanNumber: data.nextChallanNumber || 1,
-          enableGst: data.enableGst !== undefined ? data.enableGst : true,
-          profitWithoutGst: data.profitWithoutGst !== undefined ? data.profitWithoutGst : true,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
-          updatedAt: new Date()
-        
-      }
-      });
-      if (data.termsPresets && Array.isArray(data.termsPresets)) {
-        for (const tp of data.termsPresets) {
-          await prisma.termsPresets.upsert({
-            where: { id: tp.id },
-            update: {
-              companyProfileId: data.id,
-              title: tp.title,
-              content: tp.content
-            },
-            create: {
-              id: tp.id,
-              companyProfileId: data.id,
-              title: tp.title,
-              content: tp.content,
-              createdAt: data.createdAt ? new Date(data.createdAt) : new Date()
-            }
-          });
-        }
-      }
-    }
-
-    else if (model === "customers") {
-      await prisma.customers.upsert({
-        where: { id: data.id },
-        update: {
-          name: data.name,
-          company: data.company,
-          email: data.email,
-          phone: data.phone,
-          gstin: data.gstin,
-          state: data.state || "Maharashtra",
-          billingAddress: data.billingAddress,
-          shippingAddress: data.shippingAddress,
-          updatedAt: new Date()
-        },
-        create: {
-          id: data.id,
-          name: data.name,
-          company: data.company,
-          email: data.email,
-          phone: data.phone,
-          gstin: data.gstin,
-          state: data.state || "Maharashtra",
-          billingAddress: data.billingAddress,
-          shippingAddress: data.shippingAddress,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
-          updatedAt: new Date()
-        
-      }
-      });
-    }
-
-    else if (model === "products") {
-      await prisma.products.upsert({
-        where: { id: data.id },
-        update: {
-          name: data.name || "Unnamed Product",
-          sku: data.sku,
-          rate: data.rate || 0,
-          gstRate: data.gstRate || 18,
-          hsnCode: data.hsnCode,
-          description: data.description,
-          itemType: data.itemType,
-          mrp: data.mrp,
-          lastPurchasePrice: data.lastPurchasePrice,
-          sellPrice: data.sellPrice,
-          updatedAt: new Date()
-        },
-        create: {
-          id: data.id,
-          name: data.name || "Unnamed Product",
-          sku: data.sku,
-          rate: data.rate || 0,
-          gstRate: data.gstRate || 18,
-          hsnCode: data.hsnCode,
-          description: data.description,
-          itemType: data.itemType,
-          mrp: data.mrp,
-          lastPurchasePrice: data.lastPurchasePrice,
-          sellPrice: data.sellPrice,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
-          updatedAt: new Date()
-        
-      }
-      });
-    }
-
-    else if (model === "quotations") {
-      await prisma.quotationItems.deleteMany({ where: { quotationId: data.id } });
-
-      if (data.customerId) {
-        const custExists = await prisma.customers.findUnique({ where: { id: data.customerId } });
-        if (!custExists) {
-          await prisma.customers.create({
-            data: { id: data.customerId, name: "Placeholder Customer", state: "Maharashtra" }
-          });
-        }
-      }
-
-      await prisma.quotations.upsert({
-        where: { id: data.id },
-        update: {
-          quotationNo: data.quotationNo,
-          date: data.date ? new Date(data.date) : new Date(),
-          validUntil: data.validUntil ? new Date(data.validUntil) : null,
-          customerId: data.customerId,
-          subject: data.subject,
-          subtotal: data.subtotal || 0,
-          discountTotal: data.discountTotal || 0,
-          cgstTotal: data.cgstTotal || 0,
-          sgstTotal: data.sgstTotal || 0,
-          igstTotal: data.igstTotal || 0,
-          grandTotal: data.grandTotal || 0,
-          status: data.status,
-          terms: data.terms,
-          companyId: data.companyId || null,
-          termsPresetId: data.termsPresetId || null,
-          freight: data.freight,
-          additionalDiscount: data.additionalDiscount,
-          customerSignature: data.customerSignature,
-          customerSignedAt: data.customerSignedAt ? new Date(data.customerSignedAt) : null,
-          revisionNumber: data.revisionNumber,
-          updatedAt: new Date()
-        },
-        create: {
-          id: data.id,
-          quotationNo: data.quotationNo,
-          date: data.date ? new Date(data.date) : new Date(),
-          validUntil: data.validUntil ? new Date(data.validUntil) : null,
-          customerId: data.customerId,
-          subject: data.subject,
-          subtotal: data.subtotal || 0,
-          discountTotal: data.discountTotal || 0,
-          cgstTotal: data.cgstTotal || 0,
-          sgstTotal: data.sgstTotal || 0,
-          igstTotal: data.igstTotal || 0,
-          grandTotal: data.grandTotal || 0,
-          status: data.status,
-          terms: data.terms,
-          companyId: data.companyId || null,
-          termsPresetId: data.termsPresetId || null,
-          freight: data.freight,
-          additionalDiscount: data.additionalDiscount,
-          customerSignature: data.customerSignature,
-          customerSignedAt: data.customerSignedAt ? new Date(data.customerSignedAt) : null,
-          revisionNumber: data.revisionNumber,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
-          updatedAt: new Date()
-        
-      }
-      });
-
-      if (data.items && Array.isArray(data.items)) {
-        for (const item of data.items) {
-          await prisma.quotationItems.create({
-            data: {
-              quotationId: data.id,
-              productId: item.productId,
-              productName: item.productName || "Product",
-              description: item.description,
-              hsnCode: item.hsnCode,
-              quantity: item.quantity || 1,
-              rate: item.rate || 0,
-              discountPercent: item.discountPercent || 0,
-              gstPercent: item.gstPercent || 18
-            }
-          });
-        }
-      }
-    }
-
-    else if (model === "invoices" || model === "proforma_invoices") {
-      await prisma.invoiceItems.deleteMany({ where: { invoiceId: data.id } });
-
-      if (data.customerId) {
-        const custExists = await prisma.customers.findUnique({ where: { id: data.customerId } });
-        if (!custExists) {
-          await prisma.customers.create({
-            data: { id: data.customerId, name: "Placeholder Customer", state: "Maharashtra" }
-          });
-        }
-      }
-
-      await prisma.invoices.upsert({
-        where: { id: data.id },
-        update: {
-          invoiceNo: data.invoiceNo,
-          quotationNo: data.quotationNo,
-          date: data.date ? new Date(data.date) : new Date(),
-          dueDate: data.dueDate ? new Date(data.dueDate) : null,
-          customerId: data.customerId,
-          subject: data.subject,
-          subtotal: data.subtotal || 0,
-          discountTotal: data.discountTotal || 0,
-          cgstTotal: data.cgstTotal || 0,
-          sgstTotal: data.sgstTotal || 0,
-          igstTotal: data.igstTotal || 0,
-          grandTotal: data.grandTotal || 0,
-          status: data.status,
-          terms: data.terms,
-          companyId: data.companyId || null,
-          termsPresetId: data.termsPresetId || null,
-          freight: data.freight,
-          additionalDiscount: data.additionalDiscount,
-          customerSignature: data.customerSignature,
-          customerSignedAt: data.customerSignedAt ? new Date(data.customerSignedAt) : null,
-          updatedAt: new Date()
-        },
-        create: {
-          id: data.id,
-          invoiceNo: data.invoiceNo,
-          quotationNo: data.quotationNo,
-          date: data.date ? new Date(data.date) : new Date(),
-          dueDate: data.dueDate ? new Date(data.dueDate) : null,
-          customerId: data.customerId,
-          subject: data.subject,
-          subtotal: data.subtotal || 0,
-          discountTotal: data.discountTotal || 0,
-          cgstTotal: data.cgstTotal || 0,
-          sgstTotal: data.sgstTotal || 0,
-          igstTotal: data.igstTotal || 0,
-          grandTotal: data.grandTotal || 0,
-          status: data.status,
-          terms: data.terms,
-          companyId: data.companyId || null,
-          termsPresetId: data.termsPresetId || null,
-          freight: data.freight,
-          additionalDiscount: data.additionalDiscount,
-          customerSignature: data.customerSignature,
-          customerSignedAt: data.customerSignedAt ? new Date(data.customerSignedAt) : null,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
-          updatedAt: new Date()
-        
-      }
-      });
-
-      if (data.items && Array.isArray(data.items)) {
-        for (const item of data.items) {
-          await prisma.invoiceItems.create({
-            data: {
-              invoiceId: data.id,
-              productId: item.productId,
-              productName: item.productName || "Product",
-              description: item.description,
-              hsnCode: item.hsnCode,
-              quantity: item.quantity || 1,
-              rate: item.rate || 0,
-              discountPercent: item.discountPercent || 0,
-              gstPercent: item.gstPercent || 18
-            }
-          });
-        }
-      }
-    }
-
-    else if (model === "challans") {
-      await prisma.deliveryChallanItems.deleteMany({ where: { deliveryChallanId: data.id } });
-
-      if (data.customerId) {
-        const custExists = await prisma.customers.findUnique({ where: { id: data.customerId } });
-        if (!custExists) {
-          await prisma.customers.create({
-            data: { id: data.customerId, name: "Placeholder Customer", state: "Maharashtra" }
-          });
-        }
-      }
-
-      await prisma.deliveryChallans.upsert({
-        where: { id: data.id },
-        update: {
-          challanNo: data.challanNo,
-          date: data.date ? new Date(data.date) : new Date(),
-          customerId: data.customerId,
-          vehicleNo: data.vehicleNo,
-          transporter: data.transporter,
-          lrNumber: data.lrNumber,
-          dispatchAddress: data.dispatchAddress,
-          status: data.status,
-          notes: data.notes,
-          companyId: data.companyId || null,
-          updatedAt: new Date()
-        },
-        create: {
-          id: data.id,
-          challanNo: data.challanNo,
-          date: data.date ? new Date(data.date) : new Date(),
-          customerId: data.customerId,
-          vehicleNo: data.vehicleNo,
-          transporter: data.transporter,
-          lrNumber: data.lrNumber,
-          dispatchAddress: data.dispatchAddress,
-          status: data.status,
-          notes: data.notes,
-          companyId: data.companyId || null,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
-          updatedAt: new Date()
-        
-      }
-      });
-
-      if (data.items && Array.isArray(data.items)) {
-        for (const item of data.items) {
-          await prisma.deliveryChallanItems.create({
-            data: {
-              deliveryChallanId: data.id,
-              productName: item.productName || "Product",
-              quantity: item.quantity || 1,
-              hsnCode: item.hsnCode,
-              description: item.description
-            }
-          });
-        }
-      }
-    }
-
-    else if (model === "leads") {
-      await prisma.leads.upsert({
-        where: { id: data.id },
-        update: {
-          customerId: data.customerId || null,
-          name: data.name,
-          company: data.company,
-          email: data.email,
-          phone: data.phone,
-          value: data.value || 0,
-          status: data.status,
-          source: data.source,
-          notes: data.notes,
-          date: data.date ? new Date(data.date) : null,
-          conversionStatus: data.conversionStatus,
-          updatedAt: new Date()
-        },
-        create: {
-          id: data.id,
-          customerId: data.customerId || null,
-          name: data.name,
-          company: data.company,
-          email: data.email,
-          phone: data.phone,
-          value: data.value || 0,
-          status: data.status,
-          source: data.source,
-          notes: data.notes,
-          date: data.date ? new Date(data.date) : null,
-          conversionStatus: data.conversionStatus,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
-          updatedAt: new Date()
-        
-      }
-      });
-    }
-
-    else if (model === "subscriptions") {
-      if (data.customerId) {
-        const custExists = await prisma.customers.findUnique({ where: { id: data.customerId } });
-        if (!custExists) {
-          await prisma.customers.create({
-            data: { id: data.customerId, name: "Placeholder Customer", state: "Maharashtra" }
-          });
-        }
-      }
-
-      await prisma.subscriptions.upsert({
-        where: { id: data.id },
-        update: {
-          customerId: data.customerId,
-          serviceName: data.serviceName,
-          amount: data.amount || 0,
-          billingCycle: data.billingCycle,
-          startDate: data.startDate ? new Date(data.startDate) : new Date(),
-          nextRenewalDate: data.nextRenewalDate ? new Date(data.nextRenewalDate) : new Date(),
-          status: data.status,
-          description: data.description,
-          updatedAt: new Date()
-        },
-        create: {
-          id: data.id,
-          customerId: data.customerId,
-          serviceName: data.serviceName,
-          amount: data.amount || 0,
-          billingCycle: data.billingCycle,
-          startDate: data.startDate ? new Date(data.startDate) : new Date(),
-          nextRenewalDate: data.nextRenewalDate ? new Date(data.nextRenewalDate) : new Date(),
-          status: data.status,
-          description: data.description,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
-          updatedAt: new Date()
-        
-      }
-      });
-    }
-
-    else if (model === "reminders") {
-      await prisma.reminders.upsert({
-        where: { id: data.id },
-        update: {
-          title: data.title,
-          description: data.description,
-          dueDate: data.dueDate ? new Date(data.dueDate) : new Date(),
-          status: data.status,
-          priority: data.priority,
-          relatedTo: data.relatedTo,
-          subscriptionId: data.subscriptionId || null,
-          customerId: data.customerId || null,
-          updatedAt: new Date()
-        },
-        create: {
-          id: data.id,
-          title: data.title,
-          description: data.description,
-          dueDate: data.dueDate ? new Date(data.dueDate) : new Date(),
-          status: data.status,
-          priority: data.priority,
-          relatedTo: data.relatedTo,
-          subscriptionId: data.subscriptionId || null,
-          customerId: data.customerId || null,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
-          updatedAt: new Date()
-        
-      }
-      });
-    }
-
-    else if (model === "inventory") {
-      const cleanSku = data.sku ? data.sku.toUpperCase().trim() : "";
-      const cleanQuantity = Number(data.quantity) || 0;
-      const cleanMinQty = Number(data.minQuantity) || 0;
-      const cleanUnitPrice = Number(data.unitPrice) || 0;
-      const cleanLatestPurchasePrice = data.latestPurchasePrice !== undefined && data.latestPurchasePrice !== null && data.latestPurchasePrice !== "" ? Number(data.latestPurchasePrice) : null;
-
-      await prisma.inventoryLogs.deleteMany({ where: { inventoryItemId: data.id } });
-
-      if (cleanSku) {
-        const prodExists = await prisma.products.findUnique({ where: { sku: cleanSku } });
-        if (!prodExists) {
-          const placeholderId = `prod_placeholder_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-          await prisma.products.create({
-            data: {
-              id: placeholderId,
-              name: data.productName || `Product for SKU ${cleanSku}`,
-              sku: cleanSku,
-              rate: cleanUnitPrice || 0,
-              gstRate: 18,
-              description: "Automatically created placeholder product for inventory item"
-            }
-          });
-        }
-      }
-
-      await prisma.inventoryItems.upsert({
-        where: { id: data.id },
-        update: {
-          sku: cleanSku,
-          productName: data.productName || "Product",
-          category: data.category || null,
-          quantity: cleanQuantity,
-          minQuantity: cleanMinQty,
-          purchaseFrom: data.purchaseFrom || null,
-          unitPrice: cleanUnitPrice,
-          latestPurchasePrice: cleanLatestPurchasePrice,
-          lastUpdated: data.lastUpdated ? new Date(data.lastUpdated) : new Date()
-        },
-        create: {
-          id: data.id,
-          sku: cleanSku,
-          productName: data.productName || "Product",
-          category: data.category || null,
-          quantity: cleanQuantity,
-          minQuantity: cleanMinQty,
-          purchaseFrom: data.purchaseFrom || null,
-          unitPrice: cleanUnitPrice,
-          latestPurchasePrice: cleanLatestPurchasePrice,
-          lastUpdated: data.lastUpdated ? new Date(data.lastUpdated) : new Date(),
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date()
-        }
-      });
-
-      if (data.logs && Array.isArray(data.logs)) {
-        for (const log of data.logs) {
-          await prisma.inventoryLogs.create({
-            data: {
-              id: log.id || "log_" + Math.random().toString(36).substring(2, 15) + "_" + Date.now(),
-              inventoryItemId: data.id,
-              date: log.date ? new Date(log.date) : new Date(),
-              type: log.type || "IN",
-              quantity: Number(log.quantity) || 0,
-              reason: log.reason || null,
-              prevQty: Number(log.prevQty) || 0,
-              newQty: Number(log.newQty) || 0,
-              supplierName: log.supplierName || null,
-              customerName: log.customerName || null
-            }
-          });
-        }
-      }
-    }
-
-    res.json({ success: true, message: `Successfully saved ${model} entry` });
-  } catch (error: any) {
-    console.error(`DIAGNOSTIC SAVE ERROR for model ${model}:`, error);
-    if (isDbConnectionOrSchemaError(error)) {
-      console.log(`[Database] Database is unconfigured, masked, or unmigrated. Bypassed direct save for ${model}.`);
-      res.json({ success: true, message: `Database save bypassed for ${model} (operating in sandbox offline mode)`, isFallbackMode: true });
-    } else {
-      console.error(`Direct save failed for model ${model}:`, error);
-      res.status(500).json({ success: false, error: error.message });
-    }
-  }
-});
-
-// Direct granular deletion endpoint (deprecated and removed in favor of /api/db/save batch updates)
-app.post("/api/db/delete", async (req, res) => {
-  return res.json({ success: true, message: "Bypassed (direct delete removed)" });
-  // Dead code starts here for safety/no-op
-  const { model, id } = req.body;
-  if (!model || !id) {
-    return res.status(400).json({ success: false, error: "Model and id are required" });
-  }
-
-  try {
-    console.log(`Direct entry delete requested: model=${model}, id=${id}`);
-
-    if (model === "customers") {
-      await prisma.customers.delete({ where: { id } });
-    } else if (model === "products") {
-      await prisma.products.delete({ where: { id } });
-    } else if (model === "quotations") {
-      await prisma.quotationItems.deleteMany({ where: { quotationId: id } });
-      await prisma.quotations.delete({ where: { id } });
-    } else if (model === "invoices" || model === "proforma_invoices") {
-      await prisma.invoiceItems.deleteMany({ where: { invoiceId: id } });
-      await prisma.invoices.delete({ where: { id } });
-    } else if (model === "challans") {
-      await prisma.deliveryChallanItems.deleteMany({ where: { deliveryChallanId: id } });
-      await prisma.deliveryChallans.delete({ where: { id } });
-    } else if (model === "leads") {
-      await prisma.leads.delete({ where: { id } });
-    } else if (model === "subscriptions") {
-      await prisma.subscriptions.delete({ where: { id } });
-    } else if (model === "reminders") {
-      await prisma.reminders.delete({ where: { id } });
-    } else if (model === "inventory") {
-      await prisma.inventoryLogs.deleteMany({ where: { inventoryItemId: id } });
-      await prisma.inventoryItems.delete({ where: { id } });
-    } else if (model === "company_profiles") {
-      await prisma.termsPresets.deleteMany({ where: { companyProfileId: id } });
-      await prisma.companyProfiles.delete({ where: { id } });
-    }
-
-    res.json({ success: true, message: `Deleted ${id} from ${model}` });
-  } catch (error: any) {
-    if (isDbConnectionOrSchemaError(error)) {
-      console.log(`[Database] Database is unconfigured, masked, or unmigrated. Bypassed direct delete for ${model}.`);
-      res.json({ success: true, message: `Database delete bypassed for ${model} (operating in sandbox offline mode)`, isFallbackMode: true });
-    } else {
-      console.error(`Direct delete failed for ${model}:`, error);
-      res.status(500).json({ success: false, error: error.message });
-    }
+    console.error("CRITICAL error in Prisma save endpoint:", error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
 // API to fetch backup database from PostgreSQL with fallback
-app.get("/api/db/test-connection", async (req, res) => {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    res.json({
-      success: true,
-      connected: true,
-      message: "Successfully connected to the live PostgreSQL database!"
-    });
-  } catch (error: any) {
-    console.error("[Database Test] Connection test failed:", error);
-    res.json({
-      success: false,
-      connected: false,
-      error: formatDbErrorMessage(error.message || String(error))
-    });
-  }
-});
-
 app.get("/api/db/get", async (req, res) => {
   try {
     console.log("Fetching database from Prisma models...");
     const result = await getFromPrisma();
     res.json({ success: true, data: result });
   } catch (error: any) {
-    if (isDbConnectionOrSchemaError(error)) {
-      console.log("[Database] Database is unconfigured, masked, or unmigrated (local sandbox fallback active).");
-    } else {
-      console.warn("[Database] Soft warning: Could not fetch database from PostgreSQL:", error.message);
-    }
-    res.json({ 
-      success: true, 
-      isFallbackMode: true, 
-      data: {}, 
-      error: formatDbErrorMessage(error.message) 
-    });
+    console.error("Error fetching db:", error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -964,16 +263,18 @@ app.post("/api/amazon/orders", async (req, res) => {
             dataJson: JSON.stringify({
               chunkCount: newChunkCount,
               totalCount: cappedOrders.length,
-              lastUpdated: new Date().toISOString(),
+              lastUpdated: new Date().toISOString()
             }),
+            updatedAt: new Date().toISOString()
           },
           create: {
             key: "amazon_orders_meta",
             dataJson: JSON.stringify({
               chunkCount: newChunkCount,
               totalCount: cappedOrders.length,
-              lastUpdated: new Date().toISOString(),
+              lastUpdated: new Date().toISOString()
             }),
+            updatedAt: new Date().toISOString()
           }
         });
 
@@ -1262,7 +563,7 @@ app.post("/api/marketing/generate-image", async (req, res) => {
   }
 });
 
-// GET users from PostgreSQL with fallback
+// GET users from PostgreSQL
 app.get("/api/users", async (req, res) => {
   try {
     const users = await prisma.userProfiles.findMany();
@@ -1272,60 +573,8 @@ app.get("/api/users", async (req, res) => {
     }));
     res.json({ success: true, users: profiles });
   } catch (err: any) {
-    if (isDbConnectionOrSchemaError(err)) {
-      console.log("[Database] Database is unconfigured, masked, or unmigrated (local user fallback active).");
-    } else {
-      console.warn("[Database] Soft warning: Database connection failed during user retrieval:", err.message);
-    }
-    const fallbackUsers = [
-      {
-        id: "admin_default",
-        name: "System Administrator",
-        email: "admin@application.local",
-        password: "pass",
-        role: "Admin",
-        isActive: true,
-        rights: {
-          dashboard: true,
-          quotations: true,
-          proforma: true,
-          challans: true,
-          leads: true,
-          customers: true,
-          products: true,
-          inventory: true,
-          subscriptions: true,
-          reminders: true,
-          amazonSeller: true,
-          catalogues: true,
-          settings: true
-        }
-      },
-      {
-        id: "rajan_default",
-        name: "Rajan Ghanshyam",
-        email: "rajan@devinfotech.net",
-        password: "Devansh@2007",
-        role: "Admin",
-        isActive: true,
-        rights: {
-          dashboard: true,
-          quotations: true,
-          proforma: true,
-          challans: true,
-          leads: true,
-          customers: true,
-          products: true,
-          inventory: true,
-          subscriptions: true,
-          reminders: true,
-          amazonSeller: true,
-          catalogues: true,
-          settings: true
-        }
-      }
-    ];
-    res.json({ success: true, users: fallbackUsers, dbError: formatDbErrorMessage(err.message) });
+    console.error("Error fetching users:", err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -1349,13 +598,8 @@ app.post("/api/users/create", async (req, res) => {
     const newUser = await prisma.userProfiles.create({ data: userProfile });
     res.json({ success: true, user: { ...newUser, rights: rights || {} } });
   } catch (err: any) {
-    if (isDbConnectionOrSchemaError(err)) {
-      console.log("[Database] Database is unconfigured, masked, or unmigrated. Bypassed backend user creation.");
-      res.json({ success: true, user: { id: "temp_" + Math.random().toString(36).substring(2, 15), name, email, role, rights: rights || {} }, isFallbackMode: true });
-    } else {
-      console.error("Error creating backend user:", err);
-      res.status(400).json({ success: false, error: err.message });
-    }
+    console.error("Error creating backend user:", err);
+    res.status(400).json({ success: false, error: err.message });
   }
 });
 
@@ -1376,13 +620,8 @@ app.post("/api/users/update", async (req, res) => {
     });
     res.json({ success: true });
   } catch (err: any) {
-    if (isDbConnectionOrSchemaError(err)) {
-      console.log("[Database] Database is unconfigured, masked, or unmigrated. Bypassed backend user update.");
-      res.json({ success: true, isFallbackMode: true });
-    } else {
-      console.error("Error updating backend user:", err);
-      res.status(400).json({ success: false, error: err.message });
-    }
+    console.error("Error updating backend user:", err);
+    res.status(400).json({ success: false, error: err.message });
   }
 });
 
@@ -1393,13 +632,8 @@ app.post("/api/users/delete", async (req, res) => {
     await prisma.userProfiles.delete({ where: { id } });
     res.json({ success: true });
   } catch (err: any) {
-    if (isDbConnectionOrSchemaError(err)) {
-      console.log("[Database] Database is unconfigured, masked, or unmigrated. Bypassed backend user deletion.");
-      res.json({ success: true, isFallbackMode: true });
-    } else {
-      console.error("Error deleting backend user:", err);
-      res.status(400).json({ success: false, error: err.message });
-    }
+    console.error("Error deleting backend user:", err);
+    res.status(400).json({ success: false, error: err.message });
   }
 });
 
@@ -1409,7 +643,7 @@ app.post("/api/users/login", async (req, res) => {
   try {
     const users = await prisma.userProfiles.findMany();
     const foundUser = users.find(
-      (u: any) => u.email?.toLowerCase() === email.toLowerCase()
+      (u) => u.email?.toLowerCase() === email.toLowerCase()
     );
 
     if (!foundUser) {
@@ -1426,70 +660,8 @@ app.post("/api/users/login", async (req, res) => {
 
     res.json({ success: true, user: { ...foundUser, rights: foundUser.rights ? JSON.parse(foundUser.rights) : {} } });
   } catch (err: any) {
-    if (isDbConnectionOrSchemaError(err)) {
-      console.log("[Database] Database is unconfigured, masked, or unmigrated. Bypassed database login (verifying against default fallback users).");
-      const fallbackUsers = [
-        {
-          id: "admin_default",
-          name: "System Administrator",
-          email: "admin@application.local",
-          password: "pass",
-          role: "Admin",
-          isActive: true,
-          rights: {
-            dashboard: true,
-            quotations: true,
-            proforma: true,
-            challans: true,
-            leads: true,
-            customers: true,
-            products: true,
-            inventory: true,
-            subscriptions: true,
-            reminders: true,
-            amazonSeller: true,
-            catalogues: true,
-            settings: true
-          }
-        },
-        {
-          id: "rajan_default",
-          name: "Rajan Ghanshyam",
-          email: "rajan@devinfotech.net",
-          password: "Devansh@2007",
-          role: "Admin",
-          isActive: true,
-          rights: {
-            dashboard: true,
-            quotations: true,
-            proforma: true,
-            challans: true,
-            leads: true,
-            customers: true,
-            products: true,
-            inventory: true,
-            subscriptions: true,
-            reminders: true,
-            amazonSeller: true,
-            catalogues: true,
-            settings: true
-          }
-        }
-      ];
-      const matched = fallbackUsers.find(
-        (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === (password || "")
-      );
-      if (matched) {
-        if (!matched.isActive) {
-          return res.status(403).json({ success: false, error: "This user account is inactive" });
-        }
-        return res.json({ success: true, user: matched, isFallbackMode: true });
-      }
-      return res.status(401).json({ success: false, error: "Incorrect email address or password" });
-    } else {
-      console.error("Error logging in backend user:", err);
-      res.status(401).json({ success: false, error: "Login failed" });
-    }
+    console.error("Error logging in backend user:", err);
+    res.status(401).json({ success: false, error: "Login failed" });
   }
 });
 
@@ -1556,12 +728,6 @@ app.post("/api/send-email", async (req, res) => {
 });
 
 async function seedDefaultUsers() {
-  const url = process.env.DATABASE_URL || '';
-  if (!url || url.includes('******') || url.includes('%2A%2A%2A%2A%2A%2A')) {
-    console.log('[Seeding] Bypassing user seeding: Database is unconfigured or masked (Sandbox offline mode active).');
-    return;
-  }
-
   const defaultAdmin = {
     id: "admin_default",
     name: "System Administrator",
@@ -1645,30 +811,19 @@ async function seedDefaultUsers() {
       });
       console.log("Seeded Rajan user in Prisma.");
     }
-  } catch (error: any) {
-    if (error.message && error.message.includes("relation")) {
-      console.log("[Seeding] Database table 'user_profiles' does not exist yet. Seeding bypassed.");
-    } else {
-      console.log("[Seeding] Prisma user seeding bypassed: " + (error.message || error));
-    }
+  } catch (error) {
+    console.warn("Prisma user seeding failed:", error);
   }
 }
 
 async function startServer() {
-  // Perform schema migration check and seeding, handling errors gracefully to prevent server crash on bad DATABASE_URL
-  try {
-    await performSchemaMigrationCheck();
-    await seedDefaultUsers();
-  } catch (e: any) {
-    if (isDbConnectionOrSchemaError(e)) {
-      console.log("[Database] Database is unconfigured, masked, or unmigrated. Sandbox offline mode enabled.");
-    } else {
-      console.log(`[Database] Database check bypassed: ${e.message}. Sandbox offline mode enabled.`);
-    }
-  }
+  // Perform schema migration check
+  await performSchemaMigrationCheck();
+
+  // Sync seed default users
+  await seedDefaultUsers();
 
   if (process.env.NODE_ENV !== "production") {
-    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -1687,13 +842,7 @@ async function startServer() {
   });
 }
 
-if (process.env.VERCEL) {
-  const distPath = path.join(process.cwd(), 'dist');
-  app.use(express.static(distPath));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
-} else {
+if (!process.env.VERCEL) {
   startServer();
 }
 

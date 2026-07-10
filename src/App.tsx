@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
 import DashboardView from "./components/DashboardView";
 import QuotationsView from "./components/QuotationsView";
@@ -18,8 +18,6 @@ import ReminderView from "./components/ReminderView";
 import SettingsView from "./components/SettingsView";
 import AmazonSellerView from "./components/AmazonSellerView";
 import CataloguesView from "./components/CataloguesView";
-import LoginView from "./components/LoginView";
-import { useAuth } from "./hooks/useAuth";
 import { 
   Quotation, 
   ProformaInvoice, 
@@ -50,7 +48,6 @@ import {
 } from "./utils";
 
 export default function App() {
-  const { user, logout } = useAuth();
   const [currentTab, setCurrentTab] = useState<string>("dashboard");
 
   // Core Data States
@@ -64,19 +61,6 @@ export default function App() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
-  const [dbError, setDbError] = useState<string | null>(null);
-
-  // State Mirror Refs to guarantee real-time access and prevent React state batching closures from using stale lists
-  const companyProfilesRef = useRef<CompanyProfile[]>([]);
-  const customersRef = useRef<Customer[]>([]);
-  const productsRef = useRef<Product[]>([]);
-  const quotationsRef = useRef<Quotation[]>([]);
-  const invoicesRef = useRef<ProformaInvoice[]>([]);
-  const challansRef = useRef<DeliveryChallan[]>([]);
-  const leadsRef = useRef<Lead[]>([]);
-  const subscriptionsRef = useRef<Subscription[]>([]);
-  const remindersRef = useRef<Reminder[]>([]);
-  const inventoryItemsRef = useRef<InventoryItem[]>([]);
 
   // Derived Company Settings for backward compatibility (using first company/profile as active)
   const activeProfile = companyProfiles[0] || {
@@ -100,7 +84,6 @@ export default function App() {
     nextQuotationNumber: 1,
     nextInvoiceNumber: 1,
     nextChallanNumber: 1,
-    enableGst: true,
     termsPresets: []
   };
 
@@ -125,193 +108,130 @@ export default function App() {
     challanPrefix: activeProfile.challanPrefix,
     nextQuotationNumber: activeProfile.nextQuotationNumber,
     nextInvoiceNumber: activeProfile.nextInvoiceNumber,
-    nextChallanNumber: activeProfile.nextChallanNumber,
-    enableGst: activeProfile.enableGst !== false
+    nextChallanNumber: activeProfile.nextChallanNumber
   };
 
-  // Dynamic database synchronization helper to update dynamic tables safely
-  const syncModelWithServer = async (payload: any) => {
-    try {
-      await fetch("/api/db/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+  // Sync helper to write complete state payload to server
+  const syncToServer = (payloadOverrides?: any) => {
+    const payload = {
+      company_profiles: payloadOverrides?.company_profiles || companyProfiles,
+      customers: payloadOverrides?.customers || customers,
+      products: payloadOverrides?.products || products,
+      quotations: payloadOverrides?.quotations || quotations,
+      proforma_invoices: payloadOverrides?.invoices || invoices,
+      challans: payloadOverrides?.challans || challans,
+      leads: payloadOverrides?.leads || leads,
+      subscriptions: payloadOverrides?.subscriptions || subscriptions,
+      reminders: payloadOverrides?.reminders || reminders,
+      inventory: payloadOverrides?.inventory || inventoryItems
+    };
+
+    fetch("/api/db/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.success) {
+          console.error("Failsafe saver file persistence returned failed status:", data.error);
+        }
+      })
+      .catch((err) => {
+        console.error("Failsafe background saver network issue:", err);
       });
-    } catch (err) {
-      console.error("Failed to sync state with server:", err);
-    }
   };
 
   // Initialize and Seed Storage once on mount
   useEffect(() => {
-    // 1. Fetch from server-side PostgreSQL database via direct connection
+    // 1. Fetch from server-side filesystem sync
     fetch("/api/db/get")
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`HTTP error! Status: ${res.status}`);
-        }
-        return res.json();
-      })
+      .then((res) => res.json())
       .then((resData) => {
         if (resData.success && resData.data && Object.keys(resData.data).length > 0) {
           const s = resData.data;
-          if (s.company_profiles) {
-            setCompanyProfiles(s.company_profiles);
-            companyProfilesRef.current = s.company_profiles;
-          }
-          if (s.customers) {
-            setCustomers(s.customers);
-            customersRef.current = s.customers;
-          }
-          if (s.products) {
-            setProducts(s.products);
-            productsRef.current = s.products;
-          }
-          if (s.quotations) {
-            setQuotations(s.quotations);
-            quotationsRef.current = s.quotations;
-          }
-          if (s.proforma_invoices) {
-            setInvoices(s.proforma_invoices);
-            invoicesRef.current = s.proforma_invoices;
-          }
-          if (s.challans) {
-            setChallans(s.challans);
-            challansRef.current = s.challans;
-          }
-          if (s.leads) {
-            setLeads(s.leads);
-            leadsRef.current = s.leads;
-          }
-          if (s.subscriptions) {
-            setSubscriptions(s.subscriptions);
-            subscriptionsRef.current = s.subscriptions;
-          }
-          if (s.reminders) {
-            setReminders(s.reminders);
-            remindersRef.current = s.reminders;
-          }
-          if (s.inventory) {
-            setInventoryItems(s.inventory);
-            inventoryItemsRef.current = s.inventory;
-          }
+          if (s.company_profiles) setCompanyProfiles(s.company_profiles);
+          if (s.customers) setCustomers(s.customers);
+          if (s.products) setProducts(s.products);
+          if (s.quotations) setQuotations(s.quotations);
+          if (s.proforma_invoices) setInvoices(s.proforma_invoices);
+          if (s.challans) setChallans(s.challans);
+          if (s.leads) setLeads(s.leads);
+          if (s.subscriptions) setSubscriptions(s.subscriptions);
+          if (s.reminders) setReminders(s.reminders);
+          if (s.inventory) setInventoryItems(s.inventory);
         } else {
-          if (!resData.success && resData.error) {
-            setDbError(resData.error);
-          }
-          // Seed standard defaults
+          // Fallback check and seed standard local defaults
           setCompanyProfiles(SEED_COMPANY_PROFILES);
-          companyProfilesRef.current = SEED_COMPANY_PROFILES;
           setCustomers(SEED_CUSTOMERS);
-          customersRef.current = SEED_CUSTOMERS;
           setProducts(SEED_PRODUCTS);
-          productsRef.current = SEED_PRODUCTS;
           setQuotations(SEED_QUOTATIONS);
-          quotationsRef.current = SEED_QUOTATIONS;
           setInvoices(SEED_PROFORMA_INVOICES);
-          invoicesRef.current = SEED_PROFORMA_INVOICES;
           setChallans(SEED_CHALLANS);
-          challansRef.current = SEED_CHALLANS;
           setLeads(SEED_LEADS);
-          leadsRef.current = SEED_LEADS;
           setSubscriptions(SEED_SUBSCRIPTIONS);
-          subscriptionsRef.current = SEED_SUBSCRIPTIONS;
           setReminders(SEED_REMINDERS);
-          remindersRef.current = SEED_REMINDERS;
           setInventoryItems(SEED_INVENTORY);
-          inventoryItemsRef.current = SEED_INVENTORY;
           
-          if (resData.success) {
-            // Write starting seed to server right away so they exist
-            const startingState = {
-              company_profiles: SEED_COMPANY_PROFILES,
-              customers: SEED_CUSTOMERS,
-              products: SEED_PRODUCTS,
-              quotations: SEED_QUOTATIONS,
-              proforma_invoices: SEED_PROFORMA_INVOICES,
-              challans: SEED_CHALLANS,
-              leads: SEED_LEADS,
-              subscriptions: SEED_SUBSCRIPTIONS,
-              reminders: SEED_REMINDERS,
-              inventory: SEED_INVENTORY
-            };
-            fetch("/api/db/save", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(startingState)
-            }).catch(err => console.error("Could not write initial starting state seeds to server:", err));
-          }
+          // Write starting seed to server right away so they exist
+          const startingState = {
+            company_profiles: SEED_COMPANY_PROFILES,
+            customers: SEED_CUSTOMERS,
+            products: SEED_PRODUCTS,
+            quotations: SEED_QUOTATIONS,
+            proforma_invoices: SEED_PROFORMA_INVOICES,
+            challans: SEED_CHALLANS,
+            leads: SEED_LEADS,
+            subscriptions: SEED_SUBSCRIPTIONS,
+            reminders: SEED_REMINDERS,
+            inventory: SEED_INVENTORY
+          };
+          fetch("/api/db/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(startingState)
+          }).catch(err => console.error("Could not write initial starting state seeds to server:", err));
         }
       })
       .catch((err) => {
-        console.warn("Express server direct database load failed:", err);
-        setDbError(err.message || String(err));
-        
-        // Seed standard defaults as a fallback
-        setCompanyProfiles(SEED_COMPANY_PROFILES);
-        companyProfilesRef.current = SEED_COMPANY_PROFILES;
-        setCustomers(SEED_CUSTOMERS);
-        customersRef.current = SEED_CUSTOMERS;
-        setProducts(SEED_PRODUCTS);
-        productsRef.current = SEED_PRODUCTS;
-        setQuotations(SEED_QUOTATIONS);
-        quotationsRef.current = SEED_QUOTATIONS;
-        setInvoices(SEED_PROFORMA_INVOICES);
-        invoicesRef.current = SEED_PROFORMA_INVOICES;
-        setChallans(SEED_CHALLANS);
-        challansRef.current = SEED_CHALLANS;
-        setLeads(SEED_LEADS);
-        leadsRef.current = SEED_LEADS;
-        setSubscriptions(SEED_SUBSCRIPTIONS);
-        subscriptionsRef.current = SEED_SUBSCRIPTIONS;
-        setReminders(SEED_REMINDERS);
-        remindersRef.current = SEED_REMINDERS;
-        setInventoryItems(SEED_INVENTORY);
-        inventoryItemsRef.current = SEED_INVENTORY;
+        console.warn("Express server persist load unavailable, matching localstorage fallback:", err);
       });
   }, []);
 
-  // Database persistence helper wrappers using transaction-safe batch updates
+  // Update localStorage and filesystem helper wrappers
   const updateCompanyProfiles = (updated: CompanyProfile[]) => {
     setCompanyProfiles(updated);
-    companyProfilesRef.current = updated;
-    syncModelWithServer({ company_profiles: updated });
+    syncToServer({ company_profiles: updated });
   };
 
   const updateCustomers = (updated: Customer[]) => {
     setCustomers(updated);
-    customersRef.current = updated;
-    syncModelWithServer({ customers: updated });
+    syncToServer({ customers: updated });
   };
 
   const updateProducts = (updated: Product[]) => {
     setProducts(updated);
-    productsRef.current = updated;
-    syncModelWithServer({ products: updated });
+    syncToServer({ products: updated });
   };
 
   const updateQuotations = (updated: Quotation[]) => {
     setQuotations(updated);
-    quotationsRef.current = updated;
-    syncModelWithServer({ quotations: updated });
+    syncToServer({ quotations: updated });
   };
 
   const updateInvoices = (updated: ProformaInvoice[]) => {
     setInvoices(updated);
-    invoicesRef.current = updated;
-    syncModelWithServer({ proforma_invoices: updated });
+    syncToServer({ invoices: updated });
   };
 
   const updateChallans = (updated: DeliveryChallan[]) => {
     setChallans(updated);
-    challansRef.current = updated;
-    syncModelWithServer({ challans: updated });
+    syncToServer({ challans: updated });
   };
 
   const updateLeads = (updated: Lead[]) => {
     setLeads(updated);
-    leadsRef.current = updated;
-    syncModelWithServer({ leads: updated });
+    syncToServer({ leads: updated });
   };
 
   const updateSubscriptions = (updatedSubs: Subscription[]) => {
@@ -327,9 +247,8 @@ export default function App() {
     });
 
     setSubscriptions(checkedSubs);
-    subscriptionsRef.current = checkedSubs;
 
-    let newReminders = [...remindersRef.current];
+    let newReminders = [...reminders];
 
     checkedSubs.forEach(sub => {
        // Clear ALL existing reminders for this sub to prevent stale/duplicate entries
@@ -340,7 +259,7 @@ export default function App() {
 
        // If the subscription is Active and not expired and next renewal date is set:
        if (sub.status === "Active" && sub.nextRenewalDate && !isExpired) {
-          const customer = customersRef.current.find(c => c.id === sub.customerId);
+          const customer = customers.find(c => c.id === sub.customerId);
           // Auto-generate exactly ONE latest active reminder where dueDate is strictly the subscription's nextRenewalDate
           newReminders.push({
              id: `rem_sub_${sub.id}`,
@@ -356,24 +275,19 @@ export default function App() {
     });
 
     setReminders(newReminders);
-    remindersRef.current = newReminders;
-
-    syncModelWithServer({
-      subscriptions: checkedSubs,
-      reminders: newReminders
-    });
+    
+    // Write full sync state
+    syncToServer({ subscriptions: checkedSubs, reminders: newReminders });
   };
 
   const updateReminders = (updated: Reminder[]) => {
     setReminders(updated);
-    remindersRef.current = updated;
-    syncModelWithServer({ reminders: updated });
+    syncToServer({ reminders: updated });
   };
   
   const updateInventory = (updated: InventoryItem[]) => {
     setInventoryItems(updated);
-    inventoryItemsRef.current = updated;
-    syncModelWithServer({ inventory: updated });
+    syncToServer({ inventory: updated });
   };
 
   // Convert Quotation into active Proforma Invoice (SaaS/Corporate ease!)
@@ -436,68 +350,20 @@ export default function App() {
     setCurrentTab("leads");
   };
 
-  if (!user) {
-    return <LoginView />;
-  }
-
   return (
     <div className="flex bg-slate-50 min-h-screen text-slate-900">
       {/* Sidebar Component with perfect visual copying mapping */}
       <Sidebar 
         currentTab={currentTab} 
         onTabChange={setCurrentTab}
-        userName={user.name}
-        userEmail={user.email}
-        onLogout={logout}
-        user={user}
+        userName="Administrator"
+        userEmail="admin@example.com"
+        onLogout={() => {}}
+        user={null}
       />
 
       {/* Main Content scroll window */}
       <main className="flex-1 p-6 md:p-8 overflow-y-auto max-h-screen custom-scrollbar">
-        {dbError && (
-          <div className="mb-6 p-4 md:p-5 bg-red-50 border border-red-200 rounded-lg text-red-800 shadow-sm transition-all relative">
-            <div className="flex gap-3">
-              <span className="text-xl">⚠️</span>
-              <div className="flex-1">
-                <h3 className="font-semibold text-red-900 text-sm md:text-base">Database Connection Issue Detected</h3>
-                <div className="mt-2 text-xs md:text-sm text-red-800 space-y-2 font-sans leading-relaxed">
-                  <p>
-                    The server failed to authenticate or connect with your PostgreSQL database.
-                  </p>
-                  {dbError.includes('******') || dbError.includes('%2A%2A%2A%2A%2A%2A') ? (
-                    <div className="bg-white/80 p-3 rounded border border-red-100 font-mono text-[11px] md:text-xs text-red-700 leading-normal">
-                      <strong>Reason:</strong> Your <code>DATABASE_URL</code> contains <code>******</code> (the masked/hidden password placeholder) instead of your actual database password.
-                      <p className="mt-2 text-slate-800 font-sans">
-                        To resolve this:
-                      </p>
-                      <ol className="list-decimal list-inside mt-1 space-y-1 text-slate-700 font-sans">
-                        <li>Locate your database connection details or credentials.</li>
-                        <li>Make sure to use your actual database password instead of the masked '******' placeholder.</li>
-                        <li>Copy the complete unmasked connection string.</li>
-                        <li>Open Google AI Studio, click the <strong>Settings</strong> button in the left panel, and paste the unmasked URL into <code>DATABASE_URL</code> and <code>DATABASE_URL_UNPOOLED</code>.</li>
-                      </ol>
-                    </div>
-                  ) : (
-                    <p className="bg-white/80 p-3 rounded border border-red-100 font-mono text-xs text-red-700 leading-normal">
-                      <strong>Error Details:</strong> {dbError}
-                    </p>
-                  )}
-                  <p className="text-xs text-slate-600 font-sans italic mt-1">
-                    * Fallback Active: We have automatically loaded clean default/seed values so you can still fully use, explore, and run all application screens in fallback mode!
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setDbError(null)}
-                className="absolute top-3 right-3 text-red-400 hover:text-red-700 font-medium text-sm transition-colors p-1"
-                title="Dismiss"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
-
         {currentTab === "dashboard" && (
           <DashboardView 
             quotations={quotations}
@@ -505,7 +371,6 @@ export default function App() {
             leads={leads}
             customers={customers}
             reminders={reminders}
-            companySettings={companySettings}
             onNavigate={setCurrentTab}
             onAddQuotation={handleAddNewQuotationTrigger}
             onAddLead={handleAddNewLeadTrigger}

@@ -34,8 +34,6 @@ CREATE TABLE IF NOT EXISTS company_profiles (
     next_quotation_number INT DEFAULT 1,
     next_invoice_number INT DEFAULT 1,
     next_challan_number INT DEFAULT 1,
-    enable_gst BOOLEAN DEFAULT TRUE,
-    profit_without_gst BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

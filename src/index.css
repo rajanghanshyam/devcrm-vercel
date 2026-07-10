@@ -42,11 +42,16 @@
   background: #94a3b8;
 }
 
+#printable-area-container {
+  text-transform: uppercase;
+}
+
 /* Professional Print CSS centering and scaling only the active document layout */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 0 !important;
+    margin: 1.2cm !important;
+    margin-bottom: 0.15in !important;
   }
   
   body {
@@ -65,13 +70,11 @@
     top: 0 !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: 1.2cm !important;
+    padding: 0 !important;
     box-shadow: none !important;
     border: none !important;
     background: white !important;
     color: black !important;
-    box-sizing: border-box !important;
-    display: block !important; /* Prevent CSS flexbox bugs from breaking table structure on print/save PDF */
   }
 
   /* Force child elements of printables to be completely visible */
@@ -88,28 +91,12 @@
   }
 
   /* Prevent page cutoff within key sections */
-  thead {
-    display: table-header-group !important;
-  }
-  tfoot {
-    display: table-footer-group !important;
-  }
   table {
     page-break-inside: auto;
   }
   tr {
     page-break-inside: avoid !important;
     page-break-after: auto !important;
-  }
-
-  /* Cover Page print layout to fit exactly on page 1 without spillover */
-  .print-cover-page {
-    height: 273mm !important;
-    max-height: 273mm !important;
-    min-height: 273mm !important;
-    page-break-after: always !important;
-    break-after: page !important;
-    box-sizing: border-box !important;
   }
 
   .page-break-inside-avoid {

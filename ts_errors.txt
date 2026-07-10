@@ -1,2 +1,0 @@
-server.ts(970,13): error TS1136: Property assignment expected.
-server.ts(978,13): error TS1136: Property assignment expected.

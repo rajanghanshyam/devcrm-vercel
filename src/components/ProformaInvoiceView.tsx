@@ -44,7 +44,6 @@ export default function ProformaInvoiceView({
   
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [companyFilter, setCompanyFilter] = useState("All");
   
   const [activeSubView, setActiveSubView] = useState<"list" | "create" | "detail" | "edit">("list");
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null);
@@ -102,8 +101,7 @@ export default function ProformaInvoiceView({
       headerImage: companySettings.headerImage,
       footerImage: companySettings.footerImage,
       termsPresets: companySettings.termsPresets || [],
-      signatureImage: companySettings.signatureImage,
-      enableGst: companySettings.enableGst
+      signatureImage: companySettings.signatureImage
     };
   };
 
@@ -172,23 +170,23 @@ export default function ProformaInvoiceView({
     setActiveInvoiceId(inv.id);
     setFormCompanyId(inv.companyId || "comp_apex");
     setFormTermsPresetId(inv.termsPresetId || "");
-    setFormInvoiceNo(inv.invoiceNo || "");
+    setFormInvoiceNo(inv.invoiceNo);
     setFormQuotationNo(inv.quotationNo || "");
     setFormDate(toInputDate(inv.date));
     setFormDueDate(toInputDate(inv.dueDate));
-    setFormCustomerId(inv.customerId || "");
+    setFormCustomerId(inv.customerId);
     setFormSubject(inv.subject || "");
     setFormTerms(inv.terms || "");
     setFormItems(inv.items.map(item => ({
-      productId: item.productId || "",
-      name: item.productName || "",
+      productId: item.productId,
+      name: item.productName,
       description: item.description || "",
-      quantity: item.quantity !== undefined && item.quantity !== null ? item.quantity : 1,
-      rate: item.rate !== undefined && item.rate !== null ? item.rate : 0,
-      discountPercent: item.discountPercent !== undefined && item.discountPercent !== null ? item.discountPercent : 0,
-      gstPercent: item.gstPercent !== undefined && item.gstPercent !== null ? item.gstPercent : 18
+      quantity: item.quantity,
+      rate: item.rate,
+      discountPercent: item.discountPercent,
+      gstPercent: item.gstPercent
     })));
-    setFormStatus(inv.status || "Unpaid");
+    setFormStatus(inv.status);
     setFormFreight(inv.freight || 0);
     setFormAdditionalDiscount(inv.additionalDiscount || 0);
     setActiveSubView("edit");
@@ -253,28 +251,18 @@ export default function ProformaInvoiceView({
     const custState = customer?.state || "Maharashtra";
     const compProfile = getDocCompanyProfile(formCompanyId);
     const companyState = compProfile.state || "Maharashtra";
-    const isGstEnabled = compProfile.enableGst !== false;
 
-    const isIntrastate = String(custState).trim().toLowerCase() === String(companyState).trim().toLowerCase();
-
-    const numAdditionalDiscount = Number(formAdditionalDiscount) || 0;
-    const numFreight = Number(formFreight) || 0;
+    const isIntrastate = custState.trim().toLowerCase() === companyState.trim().toLowerCase();
 
     formItems.forEach((item) => {
-      const rate = Number(item.rate) || 0;
-      const quantity = Number(item.quantity) || 0;
-      const discountPercent = Number(item.discountPercent) || 0;
-      const gstPercent = Number(item.gstPercent) || 0;
-
-      const baseVal = rate * quantity;
-      const discountVal = (baseVal * (discountPercent || 0)) / 100;
+      const baseVal = item.rate * item.quantity;
+      const discountVal = (baseVal * (item.discountPercent || 0)) / 100;
       const taxableVal = baseVal - discountVal;
 
       subtotal += baseVal;
       discountTotal += discountVal;
 
-      const gstPercentToUse = isGstEnabled ? (gstPercent || 0) : 0;
-      const totalGst = (taxableVal * gstPercentToUse) / 100;
+      const totalGst = (taxableVal * (item.gstPercent || 0)) / 100;
 
       if (isIntrastate) {
         cgstTotal += totalGst / 2;
@@ -284,7 +272,7 @@ export default function ProformaInvoiceView({
       }
     });
 
-    const grandTotal = subtotal - discountTotal - numAdditionalDiscount + numFreight + cgstTotal + sgstTotal + igstTotal;
+    const grandTotal = subtotal - discountTotal - (formAdditionalDiscount || 0) + (formFreight || 0) + cgstTotal + sgstTotal + igstTotal;
 
     return {
       subtotal: Math.round(subtotal * 100) / 100,
@@ -421,10 +409,8 @@ export default function ProformaInvoiceView({
       (compName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (clientName || "").toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = statusFilter === "All" || inv.status === statusFilter;
-    const matchesCompany = companyFilter === "All" || inv.companyId === companyFilter;
-
-    return matchesSearch && matchesStatus && matchesCompany;
+    if (statusFilter === "All") return matchesSearch;
+    return matchesSearch && inv.status === statusFilter;
   });
 
   return (
@@ -446,7 +432,7 @@ export default function ProformaInvoiceView({
           </div>
 
           {/* Filters Bar */}
-          <div className="flex flex-col md:flex-row gap-4 bg-white p-3.5 rounded-xl border border-slate-200 font-sans shadow-sm">
+          <div className="flex flex-col sm:flex-row gap-4 bg-white p-3.5 rounded-xl border border-slate-200 font-sans shadow-sm">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
               <input
@@ -458,34 +444,18 @@ export default function ProformaInvoiceView({
               />
             </div>
             
-            <div className="flex items-center gap-4 flex-wrap md:flex-nowrap shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Company:</span>
-                <select
-                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:ring-1 focus:ring-indigo-500 focus:outline-none focus:border-indigo-500 max-w-[200px]"
-                  value={companyFilter}
-                  onChange={(e) => setCompanyFilter(e.target.value)}
-                >
-                  <option value="All">All Companies</option>
-                  {companyProfiles.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Status:</span>
-                <select
-                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:ring-1 focus:ring-indigo-500 focus:outline-none focus:border-indigo-500"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="All">All Invoices</option>
-                  <option value="Paid">Paid</option>
-                  <option value="Unpaid">Unpaid</option>
-                  <option value="Overdue">Overdue</option>
-                </select>
-              </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Status:</span>
+              <select
+                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-705 focus:ring-1 focus:ring-indigo-500 focus:outline-none focus:border-indigo-500"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="All">All Invoices</option>
+                <option value="Paid">Paid</option>
+                <option value="Unpaid">Unpaid</option>
+                <option value="Overdue">Overdue</option>
+              </select>
             </div>
           </div>
 
@@ -771,134 +741,124 @@ export default function ProformaInvoiceView({
             </div>
 
             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
-              {(() => {
-                const compProfile = getDocCompanyProfile(formCompanyId);
-                const isFormGstEnabled = compProfile.enableGst !== false;
-                return (
-                  <>
-                    {formItems.map((item, idx) => (
-                      <div 
-                        key={idx}
-                        className="grid grid-cols-1 md:grid-cols-12 gap-2.5 p-3.5 bg-slate-50 rounded-lg border border-slate-200 items-start"
-                      >
-                        {/* Select Product */}
-                        <div className="md:col-span-4 rounded-md">
-                          <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Product Catalog (Optional)</label>
-                          <select
-                            className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs text-slate-800 focus:outline-none"
-                            value={item.productId}
-                            onChange={(e) => handleProductChangeInRow(idx, e.target.value)}
-                          >
-                            <option value="">-- Custom (Type Details Below) --</option>
-                            {products.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.sku} | {p.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+              {formItems.map((item, idx) => (
+                <div 
+                  key={idx}
+                  className="grid grid-cols-1 md:grid-cols-12 gap-2.5 p-3.5 bg-slate-50 rounded-lg border border-slate-200 items-start"
+                >
+                  {/* Select Product */}
+                  <div className="md:col-span-4 rounded-md">
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Product Catalog (Optional)</label>
+                    <select
+                      className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs text-slate-800 focus:outline-none"
+                      value={item.productId}
+                      onChange={(e) => handleProductChangeInRow(idx, e.target.value)}
+                    >
+                      <option value="">-- Custom (Type Details Below) --</option>
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.sku} | {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                        {/* Custom Name */}
-                        <div className="md:col-span-4 rounded-md">
-                          <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Item Title / Service Name</label>
-                          <input
-                            type="text"
-                            required
-                            placeholder="Enter product or service name"
-                            className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs text-slate-800 focus:outline-none"
-                            value={item.name}
-                            onChange={(e) => handleItemValueChange(idx, "name", e.target.value)}
-                          />
-                        </div>
+                  {/* Custom Name */}
+                  <div className="md:col-span-4 rounded-md">
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Item Title / Service Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Enter product or service name"
+                      className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs text-slate-800 focus:outline-none"
+                      value={item.name}
+                      onChange={(e) => handleItemValueChange(idx, "name", e.target.value)}
+                    />
+                  </div>
 
-                        {/* Quantity */}
-                        <div className="md:col-span-1">
-                          <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1 text-center">Qty</label>
-                          <input
-                            type="number"
-                            required
-                            min="1"
-                            className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs text-slate-800 text-center focus:outline-none"
-                            value={item.quantity}
-                            onChange={(e) => handleItemValueChange(idx, "quantity", parseInt(e.target.value) || 1)}
-                          />
-                        </div>
+                  {/* Quantity */}
+                  <div className="md:col-span-1">
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1 text-center">Qty</label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs text-slate-800 text-center focus:outline-none"
+                      value={item.quantity}
+                      onChange={(e) => handleItemValueChange(idx, "quantity", parseInt(e.target.value) || 1)}
+                    />
+                  </div>
 
-                        {/* Rate */}
-                        <div className="md:col-span-2">
-                          <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1 text-right">Unit Rate (₹)</label>
-                          <input
-                            type="number"
-                            required
-                            min="0"
-                            className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs text-slate-800 text-right font-mono focus:outline-none"
-                            value={item.rate}
-                            onChange={(e) => handleItemValueChange(idx, "rate", parseFloat(e.target.value) || 0)}
-                          />
-                        </div>
+                  {/* Rate */}
+                  <div className="md:col-span-2">
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1 text-right">Unit Rate (₹)</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs text-slate-800 text-right font-mono focus:outline-none"
+                      value={item.rate}
+                      onChange={(e) => handleItemValueChange(idx, "rate", parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
 
-                        {/* Trash Row Button */}
-                        <div className="md:col-span-1 pt-5 flex justify-center">
-                          <button
-                            type="button"
-                            onClick={() => removeFormItemRow(idx)}
-                            disabled={formItems.length === 1}
-                            className="p-1.5 rounded text-rose-500 hover:bg-rose-55 disabled:opacity-30 cursor-pointer"
-                            title="Remove Row"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                  {/* Trash Row Button */}
+                  <div className="md:col-span-1 pt-5 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => removeFormItemRow(idx)}
+                      disabled={formItems.length === 1}
+                      className="p-1.5 rounded text-rose-500 hover:bg-rose-55 disabled:opacity-30 cursor-pointer"
+                      title="Remove Row"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
 
-                        {/* Description row below */}
-                        <div className={isFormGstEnabled ? "md:col-span-6 rounded-md" : "md:col-span-9 rounded-md"}>
-                          <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Item Description / Specifications</label>
-                          <input
-                            type="text"
-                            placeholder="Add supplementary description details..."
-                            className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs text-slate-600 focus:outline-none"
-                            value={item.description || ""}
-                            onChange={(e) => handleItemValueChange(idx, "description", e.target.value)}
-                          />
-                        </div>
+                  {/* Description row below */}
+                  <div className="md:col-span-6 rounded-md">
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Item Description / Specifications</label>
+                    <input
+                      type="text"
+                      placeholder="Add supplementary description details..."
+                      className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs text-slate-600 focus:outline-none"
+                      value={item.description || ""}
+                      onChange={(e) => handleItemValueChange(idx, "description", e.target.value)}
+                    />
+                  </div>
 
-                        {/* Trade Discount Percent */}
-                        <div className="md:col-span-3">
-                          <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1 text-center">Trade Disc %</label>
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.01"
-                            placeholder="0.00"
-                            className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs text-slate-800 text-center focus:outline-none font-mono"
-                            value={item.discountPercent}
-                            onChange={(e) => handleItemValueChange(idx, "discountPercent", parseFloat(e.target.value) || 0)}
-                          />
-                        </div>
+                  {/* Trade Discount Percent */}
+                  <div className="md:col-span-3">
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1 text-center">Trade Disc %</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      placeholder="0.00"
+                      className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs text-slate-800 text-center focus:outline-none font-mono"
+                      value={item.discountPercent}
+                      onChange={(e) => handleItemValueChange(idx, "discountPercent", parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
 
-                        {/* GST Rate Percent */}
-                        {isFormGstEnabled && (
-                          <div className="md:col-span-3">
-                            <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1 text-center">GST rate %</label>
-                            <select
-                              className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs text-slate-800 focus:outline-none cursor-pointer"
-                              value={item.gstPercent}
-                              onChange={(e) => handleItemValueChange(idx, "gstPercent", parseInt(e.target.value) || 18)}
-                            >
-                              <option value="0">0% Exempt</option>
-                              <option value="5">5% Concessional</option>
-                              <option value="12">12% Standard Lower</option>
-                              <option value="18">18% Standard GST</option>
-                              <option value="28">28% Luxury Tax</option>
-                            </select>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </>
-                );
-              })()}
+                  {/* GST Rate Percent */}
+                  <div className="md:col-span-3">
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1 text-center">GST rate %</label>
+                    <select
+                      className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs text-slate-800 focus:outline-none cursor-pointer"
+                      value={item.gstPercent}
+                      onChange={(e) => handleItemValueChange(idx, "gstPercent", parseInt(e.target.value) || 18)}
+                    >
+                      <option value="0">0% Exempt</option>
+                      <option value="5">5% Concessional</option>
+                      <option value="12">12% Standard Lower</option>
+                      <option value="18">18% Standard GST</option>
+                      <option value="28">28% Luxury Tax</option>
+                    </select>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -957,8 +917,7 @@ export default function ProformaInvoiceView({
                 const custState = customer?.state || "Maharashtra";
                 const compProfile = getDocCompanyProfile(formCompanyId);
                 const companyState = compProfile.state || "Maharashtra";
-                const isIntrastate = (custState || "").trim().toLowerCase() === (companyState || "").trim().toLowerCase();
-                const isGstEnabled = compProfile.enableGst !== false;
+                const isIntrastate = custState.trim().toLowerCase() === companyState.trim().toLowerCase();
 
                 return (
                   <div className="space-y-2 font-medium">
@@ -999,29 +958,29 @@ export default function ProformaInvoiceView({
                     </div>
 
                     <div className="flex justify-between text-slate-700 font-extrabold border-b border-slate-200 border-dashed pb-1.5">
-                      <span>{isGstEnabled ? "Net Taxable Value:" : "Net Total:"}</span>
+                      <span>Net Taxable Value:</span>
                       <span className="font-mono">
                         {formatINR(calculated.subtotal - calculated.discountTotal - (formAdditionalDiscount || 0) + (formFreight || 0))}
                       </span>
                     </div>
 
-                    {isGstEnabled && (isIntrastate ? (
+                    {isIntrastate ? (
                       <>
                         <div className="flex justify-between text-slate-500">
                           <span>Central GST (CGST component):</span>
                           <span className="font-mono text-slate-700">{formatINR(calculated.cgstTotal)}</span>
                         </div>
-                        <div className="flex justify-between text-slate-505 pb-1.5 border-b border-slate-200 border-dashed">
+                        <div className="flex justify-between text-slate-500 pb-1.5 border-b border-slate-200 border-dashed">
                           <span>State GST (SGST component):</span>
                           <span className="font-mono text-slate-700">{formatINR(calculated.sgstTotal)}</span>
                         </div>
                       </>
                     ) : (
-                      <div className="flex justify-between text-slate-505 pb-1.5 border-b border-slate-200 border-dashed">
+                      <div className="flex justify-between text-slate-500 pb-1.5 border-b border-slate-200 border-dashed">
                         <span>Integrated GST (IGST total):</span>
                         <span className="font-mono text-slate-700">{formatINR(calculated.igstTotal)}</span>
                       </div>
-                    ))}
+                    )}
 
                     <div className="flex justify-between text-indigo-900 font-bold text-sm pt-1 bg-indigo-50/50 p-2 rounded-lg border border-indigo-100">
                       <span className="uppercase tracking-wider text-[10px] text-indigo-950 flex items-center font-bold">Invoice Grand Total Due (INR):</span>
@@ -1114,8 +1073,7 @@ export default function ProformaInvoiceView({
             
             const compProfile = getDocCompanyProfile(invoice.companyId);
             const client = customers.find(c => c.id === invoice.customerId);
-            const isIntrastate = (client && compProfile) ? (client.state || "").trim().toLowerCase() === (compProfile.state || "").trim().toLowerCase() : true;
-            const isGstEnabled = compProfile.enableGst !== false;
+            const isIntrastate = (client && compProfile) ? client.state.trim().toLowerCase() === compProfile.state.trim().toLowerCase() : true;
 
             return (
               <div 
@@ -1183,7 +1141,7 @@ export default function ProformaInvoiceView({
 
 
                 {/* Billed to - Consignee Section (Updated with GSTIN) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 text-xs leading-relaxed mb-0 pb-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 text-xs leading-relaxed">
                   <div className="space-y-1 text-left">
                     <h3 className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">Billed to Consignee</h3>
                     <div className="font-bold text-sm text-slate-800">{client?.company || "N/A"}</div>
@@ -1205,11 +1163,8 @@ export default function ProformaInvoiceView({
                   </div>
                 </div>
 
-                {/* Solid spacer of exactly 0.25 inches */}
-                <div style={{ height: "0.25in" }} className="w-full clear-both select-none pointer-events-none" />
-
                 {/* Items list */}
-                <div className="overflow-x-auto ring-1 ring-slate-150 rounded-lg mt-0 mb-8">
+                <div className="overflow-x-auto ring-1 ring-slate-150 rounded-lg">
                   <table className="w-full text-left text-xs text-slate-700 min-w-[650px] border-collapse bg-transparent">
                     <thead>
                       <tr className="bg-slate-50 text-slate-700 border-b border-slate-200 uppercase text-[9px] font-black tracking-wider text-left">
@@ -1219,8 +1174,8 @@ export default function ProformaInvoiceView({
                         <th className="py-3 px-3 text-center">Qty</th>
                         <th className="py-3 px-3 text-right">Rate</th>
                         <th className="py-3 px-3 text-center">Discount</th>
-                        {isGstEnabled && <th className="py-3 px-3 text-center">Gst Rate</th>}
-                        <th className="py-3 px-4 text-right">{isGstEnabled ? "Taxable Basic Value" : "Amount"}</th>
+                        <th className="py-3 px-3 text-center">Gst Rate</th>
+                        <th className="py-3 px-4 text-right">Taxable Basic Value</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-600 text-left">
@@ -1229,7 +1184,7 @@ export default function ProformaInvoiceView({
                         const discVal = (baseVal * item.discountPercent) / 100;
                         const finalVal = baseVal - discVal;
                         return (
-                           <tr key={idx} className="hover:bg-slate-50/55">
+                          <tr key={idx} className="hover:bg-slate-50/55">
                             <td className="py-3 px-4 text-center font-bold text-slate-400 font-mono">
                               {idx + 1}
                             </td>
@@ -1248,11 +1203,9 @@ export default function ProformaInvoiceView({
                             <td className="py-3 px-3 text-center font-mono text-rose-500">
                               {item.discountPercent > 0 ? `${item.discountPercent}%` : "-"}
                             </td>
-                            {isGstEnabled && (
-                              <td className="py-3 px-3 text-center font-semibold text-indigo-600">
-                                {item.gstPercent}%
-                              </td>
-                            )}
+                            <td className="py-3 px-3 text-center font-semibold text-indigo-600">
+                              {item.gstPercent}%
+                            </td>
                             <td className="py-3 px-4 text-right font-bold text-slate-800 font-mono">
                               {formatINR(finalVal)}
                             </td>
@@ -1310,13 +1263,13 @@ export default function ProformaInvoiceView({
                       </div>
                     ) : null}
                     <div className="flex justify-between text-slate-600 border-b border-dashed border-slate-200 pb-1.5 font-bold">
-                      <span>{isGstEnabled ? "Taxable Value (Net):" : "Subtotal:"}</span>
+                      <span>Taxable Value (Net):</span>
                       <span className="font-mono text-slate-900 font-bold">
                         {formatINR(invoice.subtotal - invoice.discountTotal - (invoice.additionalDiscount || 0) + (invoice.freight || 0))}
                       </span>
                     </div>
 
-                    {isGstEnabled && (isIntrastate ? (
+                    {isIntrastate ? (
                       <>
                         <div className="flex justify-between text-slate-505">
                           <span>Central GST (CGST component):</span>
@@ -1332,7 +1285,7 @@ export default function ProformaInvoiceView({
                         <span>Integrated GST (IGST total):</span>
                         <span className="font-mono text-slate-700">{formatINR(invoice.igstTotal)}</span>
                       </div>
-                    ))}
+                    )}
 
                     <div className="flex justify-between text-indigo-900 font-sans font-black text-sm pt-1.5 leading-none">
                       <span className="uppercase text-[10px] tracking-wider text-indigo-705 font-bold">Invoice Total Due:</span>
@@ -1379,41 +1332,24 @@ export default function ProformaInvoiceView({
                     </tr>
                   </tbody>
 
-                  {compProfile.footerImage && (
-                    <tfoot className="hidden print:table-footer-group">
-                      <tr>
-                        <td className="p-0 border-none">
-                          {/* Reserve exact space for the fixed footer on print */}
-                          <div style={{ height: "1.1in" }} className="w-full clear-both" />
-                        </td>
-                      </tr>
-                    </tfoot>
-                  )}
+                  <tfoot className="print:table-footer-group">
+                    <tr>
+                      <td className="p-0 border-none print:pb-0">
+                        {/* Footer Stamp - Full Width */}
+                        {compProfile.footerImage && (
+                          <div className="w-full flex items-end justify-center mt-auto">
+                            <img 
+                              src={compProfile.footerImage} 
+                              alt="Official Stamp" 
+                              className="w-full h-auto object-contain mix-blend-multiply block" 
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
-
-                {/* For Print: Fixed at the very bottom of every page */}
-                {compProfile.footerImage && (
-                  <div className="hidden print:block" style={{ position: "fixed", bottom: "0.4in", left: "0.50in", right: "0.30in", zIndex: 50 }}>
-                    <img
-                      src={compProfile.footerImage}
-                      alt="Official Stamp"
-                      className="w-full h-auto object-contain mix-blend-multiply block"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-                )}
-
-                {/* For Screen View: Render at the end of the document content */}
-                {compProfile.footerImage && (
-                  <div className="w-full pt-8 mt-12 print:hidden">
-                    <img
-                      src={compProfile.footerImage}
-                      alt="Official Stamp"
-                      className="w-full h-auto object-contain mix-blend-multiply block"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-                )}
               </div>
             );
           })()}
