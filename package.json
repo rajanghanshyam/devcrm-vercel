@@ -35,7 +35,6 @@
     "nodemailer": "^8.0.10",
     "papaparse": "^5.5.4",
     "pg": "^8.22.0",
-    "prisma": "^7.8.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "recharts": "^3.8.1",
@@ -48,6 +47,7 @@
     "@types/nodemailer": "^8.0.0",
     "@types/pg": "^8.20.0",
     "autoprefixer": "^10.4.21",
+    "prisma": "^7.8.0",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0"
   },

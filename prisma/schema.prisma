@@ -1,327 +1,362 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-model app_data {
-  key        String  @id
-  data_json  String?
-  updated_at String?
+model CompanyProfiles {
+  id                   String                 @id @default(uuid())
+  name                 String
+  email                String
+  phone                String?
+  address              String?
+  gstin                String?
+  pan                  String?
+  state                String?
+  bankName             String?                @map("bank_name")
+  bankBranch           String?                @map("bank_branch")
+  accountNo            String?                @map("account_no")
+  ifsc                 String?
+  headerImage          String?                @map("header_image")
+  footerImage          String?                @map("footer_image")
+  signatureImage       String?                @map("signature_image")
+  template             String?                @default("minimal")
+  quotationPrefix      String?                @default("QT-") @map("quotation_prefix")
+  invoicePrefix        String?                @default("INV-") @map("invoice_prefix")
+  challanPrefix        String?                @default("DC-") @map("challan_prefix")
+  nextQuotationNumber  Int?                   @default(1) @map("next_quotation_number")
+  nextInvoiceNumber    Int?                   @default(1) @map("next_invoice_number")
+  nextChallanNumber    Int?                   @default(1) @map("next_challan_number")
+  enable_gst           Boolean?               @default(true)
+  profit_without_gst   Boolean?               @default(true)
+  createdAt            DateTime               @default(now()) @map("created_at")
+  updatedAt            DateTime               @updatedAt @map("updated_at")
+  deliveryChallans     DeliveryChallans[]
+  invoices             Invoices[]
+  quotations           Quotations[]
+  subscriptionPolicies SubscriptionPolicies[]
+  termsPresets         TermsPresets[]
+
+  @@map("company_profiles")
 }
 
-model company_profiles {
-  id                    String                  @id
-  name                  String
-  email                 String
-  phone                 String?
-  address               String?
-  gstin                 String?
-  pan                   String?
-  state                 String?
-  bank_name             String?
-  bank_branch           String?
-  account_no            String?
-  ifsc                  String?
-  header_image          String?
-  footer_image          String?
-  signature_image       String?
-  template              String?                 @default("minimal")
-  quotation_prefix      String?                 @default("QT-")
-  invoice_prefix        String?                 @default("INV-")
-  challan_prefix        String?                 @default("DC-")
-  next_quotation_number Int?                    @default(1)
-  next_invoice_number   Int?                    @default(1)
-  next_challan_number   Int?                    @default(1)
-  enable_gst            Boolean?                @default(true)
-  profit_without_gst    Boolean?                @default(true)
-  created_at            DateTime                @default(now())
-  updated_at            DateTime
-  delivery_challans     delivery_challans[]
-  invoices              invoices[]
-  quotations            quotations[]
-  subscription_policies subscription_policies[]
-  terms_presets         terms_presets[]
+model Customers {
+  id               String             @id @default(uuid())
+  name             String
+  company          String?
+  email            String?
+  phone            String?
+  gstin            String?
+  state            String
+  billingAddress   String?            @map("billing_address")
+  shippingAddress  String?            @map("shipping_address")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  deliveryChallans DeliveryChallans[]
+  invoices         Invoices[]
+  leads            Leads[]
+  quotations       Quotations[]
+  reminders        Reminders[]
+  subscriptions    Subscriptions[]
+
+  @@map("customers")
 }
 
-model customers {
-  id                String              @id
+model Products {
+  id                String           @id @default(uuid())
   name              String
-  company           String?
-  email             String?
-  phone             String?
-  gstin             String?
-  state             String
-  billing_address   String?
-  shipping_address  String?
-  created_at        DateTime            @default(now())
-  updated_at        DateTime
-  delivery_challans delivery_challans[]
-  invoices          invoices[]
-  leads             leads[]
-  quotations        quotations[]
-  reminders         reminders[]
-  subscriptions     subscriptions[]
-}
-
-model delivery_challan_items {
-  id                  Int               @id @default(autoincrement())
-  delivery_challan_id String
-  product_name        String
-  quantity            Decimal           @default(1) @db.Decimal(15, 4)
-  hsn_code            String?
-  description         String?
-  delivery_challans   delivery_challans @relation(fields: [delivery_challan_id], references: [id], onDelete: Cascade)
-}
-
-model delivery_challans {
-  id                     String                   @id
-  challan_no             String                   @unique
-  date                   DateTime                 @db.Date
-  customer_id            String
-  vehicle_no             String?
-  transporter            String?
-  lr_number              String?
-  dispatch_address       String?
-  status                 String?                  @default("Dispatched")
-  notes                  String?
-  company_id             String?
-  created_at             DateTime                 @default(now())
-  updated_at             DateTime
-  delivery_challan_items delivery_challan_items[]
-  company_profiles       company_profiles?        @relation(fields: [company_id], references: [id])
-  customers              customers                @relation(fields: [customer_id], references: [id])
-}
-
-model inventory_items {
-  id                    String           @id
-  sku                   String           @unique
-  product_name          String
-  category              String?
-  quantity              Decimal          @default(0.0000) @db.Decimal(15, 4)
-  min_quantity          Decimal          @default(0.0000) @db.Decimal(15, 4)
-  purchase_from         String?
-  unit_price            Decimal          @default(0.00) @db.Decimal(15, 2)
-  latest_purchase_price Decimal?         @db.Decimal(15, 2)
-  last_updated          DateTime         @default(now())
-  created_at            DateTime         @default(now())
-  products              products         @relation(fields: [sku], references: [sku])
-  inventory_logs        inventory_logs[]
-}
-
-model inventory_logs {
-  id                String          @id
-  inventory_item_id String
-  date              DateTime        @default(now())
-  type              String
-  quantity          Decimal         @db.Decimal(15, 4)
-  reason            String?
-  prev_qty          Decimal         @db.Decimal(15, 4)
-  new_qty           Decimal         @db.Decimal(15, 4)
-  supplier_name     String?
-  customer_name     String?
-  inventory_items   inventory_items @relation(fields: [inventory_item_id], references: [id], onDelete: Cascade)
-}
-
-model invoice_items {
-  id               Int       @id @default(autoincrement())
-  invoice_id       String
-  product_id       String?
-  product_name     String
-  description      String?
-  hsn_code         String?
-  quantity         Decimal   @default(1) @db.Decimal(15, 4)
-  rate             Decimal   @default(0.00) @db.Decimal(15, 2)
-  discount_percent Decimal?  @default(0.00) @db.Decimal(5, 2)
-  gst_percent      Decimal?  @default(18.00) @db.Decimal(5, 2)
-  invoices         invoices  @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
-  products         products? @relation(fields: [product_id], references: [id])
-}
-
-model invoices {
-  id                  String            @id
-  invoice_no          String            @unique
-  quotation_no        String?
-  date                DateTime          @db.Date
-  due_date            DateTime?         @db.Date
-  customer_id         String
-  subject             String?
-  subtotal            Decimal           @default(0.00) @db.Decimal(15, 2)
-  discount_total      Decimal           @default(0.00) @db.Decimal(15, 2)
-  cgst_total          Decimal           @default(0.00) @db.Decimal(15, 2)
-  sgst_total          Decimal           @default(0.00) @db.Decimal(15, 2)
-  igst_total          Decimal           @default(0.00) @db.Decimal(15, 2)
-  grand_total         Decimal           @default(0.00) @db.Decimal(15, 2)
-  status              String?           @default("Unpaid")
-  terms               String?
-  company_id          String?
-  terms_preset_id     String?
-  freight             Decimal?          @default(0.00) @db.Decimal(15, 2)
-  additional_discount Decimal?          @default(0.00) @db.Decimal(15, 2)
-  customer_signature  String?
-  customer_signed_at  DateTime?
-  created_at          DateTime          @default(now())
-  updated_at          DateTime
-  invoice_items       invoice_items[]
-  company_profiles    company_profiles? @relation(fields: [company_id], references: [id])
-  customers           customers         @relation(fields: [customer_id], references: [id])
-  quotations          quotations?       @relation(fields: [quotation_no], references: [quotation_no])
-  terms_presets       terms_presets?    @relation(fields: [terms_preset_id], references: [id])
-}
-
-model leads {
-  id                String     @id
-  customer_id       String?
-  name              String
-  company           String?
-  email             String?
-  phone             String?
-  value             Decimal    @default(0.00) @db.Decimal(15, 2)
-  status            String?    @default("New")
-  source            String?
-  notes             String?
-  date              DateTime?  @db.Date
-  conversion_status String?    @default("Cold")
-  created_at        DateTime   @default(now())
-  updated_at        DateTime
-  customers         customers? @relation(fields: [customer_id], references: [id])
-}
-
-model products {
-  id                  String            @id
-  name                String
-  sku                 String            @unique
-  rate                Decimal           @default(0.00) @db.Decimal(15, 2)
-  gst_rate            Decimal           @default(18.00) @db.Decimal(5, 2)
-  hsn_code            String?
-  description         String?
-  item_type           String?           @default("Product")
-  mrp                 Decimal?          @db.Decimal(15, 2)
-  last_purchase_price Decimal?          @db.Decimal(15, 2)
-  sell_price          Decimal?          @db.Decimal(15, 2)
-  created_at          DateTime          @default(now())
-  updated_at          DateTime
-  inventory_items     inventory_items?
-  invoice_items       invoice_items[]
-  quotation_items     quotation_items[]
-}
-
-model quotation_items {
-  id               Int        @id @default(autoincrement())
-  quotation_id     String
-  product_id       String?
-  product_name     String
-  description      String?
-  hsn_code         String?
-  quantity         Decimal    @default(1) @db.Decimal(15, 4)
-  rate             Decimal    @default(0.00) @db.Decimal(15, 2)
-  discount_percent Decimal?   @default(0.00) @db.Decimal(5, 2)
-  gst_percent      Decimal?   @default(18.00) @db.Decimal(5, 2)
-  products         products?  @relation(fields: [product_id], references: [id])
-  quotations       quotations @relation(fields: [quotation_id], references: [id], onDelete: Cascade)
-}
-
-model quotations {
-  id                                                        String            @id
-  quotation_no                                              String            @unique
-  date                                                      DateTime          @db.Date
-  valid_until                                               DateTime?         @db.Date
-  customer_id                                               String
-  subject                                                   String?
-  subtotal                                                  Decimal           @default(0.00) @db.Decimal(15, 2)
-  discount_total                                            Decimal           @default(0.00) @db.Decimal(15, 2)
-  cgst_total                                                Decimal           @default(0.00) @db.Decimal(15, 2)
-  sgst_total                                                Decimal           @default(0.00) @db.Decimal(15, 2)
-  igst_total                                                Decimal           @default(0.00) @db.Decimal(15, 2)
-  grand_total                                               Decimal           @default(0.00) @db.Decimal(15, 2)
-  status                                                    String?           @default("Draft")
-  terms                                                     String?
-  company_id                                                String?
-  terms_preset_id                                           String?
-  freight                                                   Decimal?          @default(0.00) @db.Decimal(15, 2)
-  additional_discount                                       Decimal?          @default(0.00) @db.Decimal(15, 2)
-  customer_signature                                        String?
-  customer_signed_at                                        DateTime?
-  revision_of_id                                            String?
-  original_quote_id                                         String?
-  revision_number                                           Int?              @default(0)
-  created_at                                                DateTime          @default(now())
-  updated_at                                                DateTime
-  invoices                                                  invoices[]
-  quotation_items                                           quotation_items[]
-  company_profiles                                          company_profiles? @relation(fields: [company_id], references: [id])
-  customers                                                 customers         @relation(fields: [customer_id], references: [id])
-  quotations_quotations_original_quote_idToquotations       quotations?       @relation("quotations_original_quote_idToquotations", fields: [original_quote_id], references: [id])
-  other_quotations_quotations_original_quote_idToquotations quotations[]      @relation("quotations_original_quote_idToquotations")
-  quotations_quotations_revision_of_idToquotations          quotations?       @relation("quotations_revision_of_idToquotations", fields: [revision_of_id], references: [id])
-  other_quotations_quotations_revision_of_idToquotations    quotations[]      @relation("quotations_revision_of_idToquotations")
-  terms_presets                                             terms_presets?    @relation(fields: [terms_preset_id], references: [id])
-}
-
-model reminders {
-  id              String         @id
-  title           String
-  description     String?
-  due_date        DateTime
-  status          String?        @default("Pending")
-  priority        String?        @default("Medium")
-  related_to      String?
-  subscription_id String?
-  customer_id     String?
-  created_at      DateTime       @default(now())
-  updated_at      DateTime
-  customers       customers?     @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-  subscriptions   subscriptions? @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
-}
-
-model subscription_policies {
-  id                     String            @id
-  company_profile_id     String?
-  days_before_renewal    Int               @default(7)
-  email_subject_template String?
-  email_body_template    String?
-  is_active              Boolean?          @default(true)
-  created_at             DateTime          @default(now())
-  company_profiles       company_profiles? @relation(fields: [company_profile_id], references: [id], onDelete: Cascade)
-}
-
-model subscriptions {
-  id                String      @id
-  customer_id       String
-  service_name      String
-  amount            Decimal     @default(0.00) @db.Decimal(15, 2)
-  billing_cycle     String
-  start_date        DateTime    @db.Date
-  next_renewal_date DateTime    @db.Date
-  status            String?     @default("Active")
+  sku               String           @unique
+  rate              Decimal          @default(0.00) @db.Decimal(15, 2)
+  gstRate           Decimal          @default(18.00) @map("gst_rate") @db.Decimal(5, 2)
+  hsnCode           String?          @map("hsn_code")
   description       String?
-  created_at        DateTime    @default(now())
-  updated_at        DateTime
-  reminders         reminders[]
-  customers         customers   @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  itemType          String?          @default("Product") @map("item_type")
+  mrp               Decimal?         @db.Decimal(15, 2)
+  lastPurchasePrice Decimal?         @map("last_purchase_price") @db.Decimal(15, 2)
+  sellPrice         Decimal?         @map("sell_price") @db.Decimal(15, 2)
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+  inventoryItem     InventoryItems?
+  invoiceItems      InvoiceItems[]
+  quotationItems    QuotationItems[]
+
+  @@map("products")
 }
 
-model terms_presets {
-  id                 String            @id
-  company_profile_id String?
-  title              String
-  content            String
-  created_at         DateTime          @default(now())
-  invoices           invoices[]
-  quotations         quotations[]
-  company_profiles   company_profiles? @relation(fields: [company_profile_id], references: [id], onDelete: Cascade)
+model TermsPresets {
+  id               String           @id @default(uuid())
+  companyProfileId String?          @map("company_profile_id")
+  title            String
+  content          String
+  createdAt        DateTime         @default(now()) @map("created_at")
+  invoices         Invoices[]
+  quotations       Quotations[]
+  companyProfile   CompanyProfiles? @relation(fields: [companyProfileId], references: [id], onDelete: Cascade)
+
+  @@map("terms_presets")
 }
 
-model user_profiles {
-  id         String   @id
-  name       String?
-  email      String?  @unique
-  role       String?
-  password   String?
-  is_active  Boolean? @default(true)
-  rights     String?
-  created_at String?
+model SubscriptionPolicies {
+  id                   String           @id @default(uuid())
+  companyProfileId     String?          @map("company_profile_id")
+  daysBeforeRenewal    Int              @default(7) @map("days_before_renewal")
+  emailSubjectTemplate String?          @map("email_subject_template")
+  emailBodyTemplate    String?          @map("email_body_template")
+  isActive             Boolean?         @default(true) @map("is_active")
+  createdAt            DateTime         @default(now()) @map("created_at")
+  companyProfile       CompanyProfiles? @relation(fields: [companyProfileId], references: [id], onDelete: Cascade)
+
+  @@map("subscription_policies")
+}
+
+model Quotations {
+  id                  String           @id @default(uuid())
+  quotationNo         String           @unique @map("quotation_no")
+  date                DateTime         @db.Date
+  validUntil          DateTime?        @map("valid_until") @db.Date
+  customerId          String           @map("customer_id")
+  subject             String?
+  subtotal            Decimal          @default(0.00) @db.Decimal(15, 2)
+  discountTotal       Decimal          @default(0.00) @map("discount_total") @db.Decimal(15, 2)
+  cgstTotal           Decimal          @default(0.00) @map("cgst_total") @db.Decimal(15, 2)
+  sgstTotal           Decimal          @default(0.00) @map("sgst_total") @db.Decimal(15, 2)
+  igstTotal           Decimal          @default(0.00) @map("igst_total") @db.Decimal(15, 2)
+  grandTotal          Decimal          @default(0.00) @map("grand_total") @db.Decimal(15, 2)
+  status              String?          @default("Draft")
+  terms               String?
+  companyId           String?          @map("company_id")
+  termsPresetId       String?          @map("terms_preset_id")
+  freight             Decimal?         @default(0.00) @db.Decimal(15, 2)
+  additionalDiscount  Decimal?         @default(0.00) @map("additional_discount") @db.Decimal(15, 2)
+  customerSignature   String?          @map("customer_signature")
+  customerSignedAt    DateTime?        @map("customer_signed_at")
+  revisionOfId        String?          @map("revision_of_id")
+  originalQuoteId     String?          @map("original_quote_id")
+  revisionNumber      Int?             @default(0) @map("revision_number")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  invoices            Invoices[]
+  quotationItems      QuotationItems[]
+  company             CompanyProfiles? @relation(fields: [companyId], references: [id])
+  customer            Customers        @relation(fields: [customerId], references: [id])
+  originalQuote       Quotations?      @relation("OriginalQuoteHistory", fields: [originalQuoteId], references: [id])
+  originatedRevisions Quotations[]     @relation("OriginalQuoteHistory")
+  revisionOf          Quotations?      @relation("RevisionHistory", fields: [revisionOfId], references: [id])
+  revisions           Quotations[]     @relation("RevisionHistory")
+  termsPreset         TermsPresets?    @relation(fields: [termsPresetId], references: [id])
+
+  @@map("quotations")
+}
+
+model QuotationItems {
+  id              Int        @id @default(autoincrement())
+  quotationId     String     @map("quotation_id")
+  productId       String?    @map("product_id")
+  productName     String     @map("product_name")
+  description     String?
+  hsnCode         String?    @map("hsn_code")
+  quantity        Decimal    @default(1) @db.Decimal(15, 4)
+  rate            Decimal    @default(0.00) @db.Decimal(15, 2)
+  discountPercent Decimal?   @default(0.00) @map("discount_percent") @db.Decimal(5, 2)
+  gstPercent      Decimal?   @default(18.00) @map("gst_percent") @db.Decimal(5, 2)
+  product         Products?  @relation(fields: [productId], references: [id])
+  quotation       Quotations @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  @@map("quotation_items")
+}
+
+model Invoices {
+  id                 String           @id @default(uuid())
+  invoiceNo          String           @unique @map("invoice_no")
+  quotationNo        String?          @map("quotation_no")
+  date               DateTime         @db.Date
+  dueDate            DateTime?        @map("due_date") @db.Date
+  customerId         String           @map("customer_id")
+  subject            String?
+  subtotal           Decimal          @default(0.00) @db.Decimal(15, 2)
+  discountTotal      Decimal          @default(0.00) @map("discount_total") @db.Decimal(15, 2)
+  cgstTotal          Decimal          @default(0.00) @map("cgst_total") @db.Decimal(15, 2)
+  sgstTotal          Decimal          @default(0.00) @map("sgst_total") @db.Decimal(15, 2)
+  igstTotal          Decimal          @default(0.00) @map("igst_total") @db.Decimal(15, 2)
+  grandTotal         Decimal          @default(0.00) @map("grand_total") @db.Decimal(15, 2)
+  status             String?          @default("Unpaid")
+  terms              String?
+  companyId          String?          @map("company_id")
+  termsPresetId      String?          @map("terms_preset_id")
+  freight            Decimal?         @default(0.00) @db.Decimal(15, 2)
+  additionalDiscount Decimal?         @default(0.00) @map("additional_discount") @db.Decimal(15, 2)
+  customerSignature  String?          @map("customer_signature")
+  customerSignedAt   DateTime?        @map("customer_signed_at")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+  invoiceItems       InvoiceItems[]
+  company            CompanyProfiles? @relation(fields: [companyId], references: [id])
+  customer           Customers        @relation(fields: [customerId], references: [id])
+  quotation          Quotations?      @relation(fields: [quotationNo], references: [quotationNo])
+  termsPreset        TermsPresets?    @relation(fields: [termsPresetId], references: [id])
+
+  @@map("invoices")
+}
+
+model InvoiceItems {
+  id              Int       @id @default(autoincrement())
+  invoiceId       String    @map("invoice_id")
+  productId       String?   @map("product_id")
+  productName     String    @map("product_name")
+  description     String?
+  hsnCode         String?   @map("hsn_code")
+  quantity        Decimal   @default(1) @db.Decimal(15, 4)
+  rate            Decimal   @default(0.00) @db.Decimal(15, 2)
+  discountPercent Decimal?  @default(0.00) @map("discount_percent") @db.Decimal(5, 2)
+  gstPercent      Decimal?  @default(18.00) @map("gst_percent") @db.Decimal(5, 2)
+  invoice         Invoices  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product         Products? @relation(fields: [productId], references: [id])
+
+  @@map("invoice_items")
+}
+
+model DeliveryChallans {
+  id                   String                 @id @default(uuid())
+  challanNo            String                 @unique @map("challan_no")
+  date                 DateTime               @db.Date
+  customerId           String                 @map("customer_id")
+  vehicleNo            String?                @map("vehicle_no")
+  transporter          String?
+  lrNumber             String?                @map("lr_number")
+  dispatchAddress      String?                @map("dispatch_address")
+  status               String?                @default("Dispatched")
+  notes                String?
+  companyId            String?                @map("company_id")
+  createdAt            DateTime               @default(now()) @map("created_at")
+  updatedAt            DateTime               @updatedAt @map("updated_at")
+  deliveryChallanItems DeliveryChallanItems[]
+  company              CompanyProfiles?       @relation(fields: [companyId], references: [id])
+  customer             Customers              @relation(fields: [customerId], references: [id])
+
+  @@map("delivery_challans")
+}
+
+model DeliveryChallanItems {
+  id                Int              @id @default(autoincrement())
+  deliveryChallanId String           @map("delivery_challan_id")
+  productName       String           @map("product_name")
+  quantity          Decimal          @default(1) @db.Decimal(15, 4)
+  hsnCode           String?          @map("hsn_code")
+  description       String?
+  deliveryChallan   DeliveryChallans @relation(fields: [deliveryChallanId], references: [id], onDelete: Cascade)
+
+  @@map("delivery_challan_items")
+}
+
+model Leads {
+  id               String     @id @default(uuid())
+  customerId       String?    @map("customer_id")
+  name             String
+  company          String?
+  email            String?
+  phone            String?
+  value            Decimal    @default(0.00) @db.Decimal(15, 2)
+  status           String?    @default("New")
+  source           String?
+  notes            String?
+  date             DateTime?  @db.Date
+  conversionStatus String?    @default("Cold") @map("conversion_status")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+  customer         Customers? @relation(fields: [customerId], references: [id])
+
+  @@map("leads")
+}
+
+model Subscriptions {
+  id              String      @id @default(uuid())
+  customerId      String      @map("customer_id")
+  serviceName     String      @map("service_name")
+  amount          Decimal     @default(0.00) @db.Decimal(15, 2)
+  billingCycle    String      @map("billing_cycle")
+  startDate       DateTime    @map("start_date") @db.Date
+  nextRenewalDate DateTime    @map("next_renewal_date") @db.Date
+  status          String?     @default("Active")
+  description     String?
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  reminders       Reminders[]
+  customer        Customers   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model Reminders {
+  id             String         @id @default(uuid())
+  title          String
+  description    String?
+  dueDate        DateTime       @map("due_date")
+  status         String?        @default("Pending")
+  priority       String?        @default("Medium")
+  relatedTo      String?        @map("related_to")
+  subscriptionId String?        @map("subscription_id")
+  customerId     String?        @map("customer_id")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  customer       Customers?     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  subscription   Subscriptions? @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@map("reminders")
+}
+
+model InventoryItems {
+  id                  String          @id @default(uuid())
+  sku                 String          @unique
+  productName         String          @map("product_name")
+  category            String?
+  quantity            Decimal         @default(0.0000) @db.Decimal(15, 4)
+  minQuantity         Decimal         @default(0.0000) @map("min_quantity") @db.Decimal(15, 4)
+  purchaseFrom        String?         @map("purchase_from")
+  unitPrice           Decimal         @default(0.00) @map("unit_price") @db.Decimal(15, 2)
+  latestPurchasePrice Decimal?        @map("latest_purchase_price") @db.Decimal(15, 2)
+  lastUpdated         DateTime        @default(now()) @map("last_updated")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  product             Products        @relation(fields: [sku], references: [sku])
+  inventoryLogs       InventoryLogs[]
+
+  @@map("inventory_items")
+}
+
+model InventoryLogs {
+  id              String         @id @default(uuid())
+  inventoryItemId String         @map("inventory_item_id")
+  date            DateTime       @default(now())
+  type            String
+  quantity        Decimal        @db.Decimal(15, 4)
+  reason          String?
+  prevQty         Decimal        @map("prev_qty") @db.Decimal(15, 4)
+  newQty          Decimal        @map("new_qty") @db.Decimal(15, 4)
+  supplierName    String?        @map("supplier_name")
+  customerName    String?        @map("customer_name")
+  inventoryItem   InventoryItems @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@map("inventory_logs")
+}
+
+model UserProfiles {
+  id        String   @id
+  name      String?
+  email     String?  @unique
+  role      String?
+  password  String?
+  isActive  Boolean? @default(true) @map("is_active")
+  rights    String?
+  createdAt String?  @map("created_at")
+
+  @@map("user_profiles")
+}
+
+model AppData {
+  key       String  @id
+  dataJson  String? @map("data_json")
+  updatedAt String? @map("updated_at")
+
+  @@map("app_data")
 }
