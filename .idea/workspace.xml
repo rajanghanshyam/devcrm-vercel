@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="a53acdcd-82c7-4bad-a1eb-861d59d2ba99" name="Changes" comment="Merge remote-tracking branch 'origin/main'">
+      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/devcrm-vercel.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.vercel/README.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.vercel/project.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prisma.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/prisma.config.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prisma/schema.prisma" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/browser.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/client.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/commonInputTypes.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/enums.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/internal/class.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/internal/prismaNamespace.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/internal/prismaNamespaceBrowser.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/app_data.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/company_profiles.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/customers.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/delivery_challan_items.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/delivery_challans.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/inventory_items.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/inventory_logs.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/invoice_items.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/invoices.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/leads.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/products.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/quotation_items.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/quotations.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/reminders.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/subscription_policies.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/subscriptions.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/terms_presets.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/user_profiles.ts" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="PUSH_AUTO_UPDATE" value="true" />
+    <option name="PUSH_TAGS">
+      <GitPushTagMode>
+        <option name="argument" value="--tags" />
+        <option name="title" value="All" />
+      </GitPushTagMode>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;rajanghanshyam&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/rajanghanshyam/devcrm-vercel.git&quot;,
+    &quot;accountId&quot;: &quot;151f6150-c392-4315-9f31-9a8b386fc02c&quot;
+  }
+}</component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.0" />
+      <entry key="S2" value="1.0" />
+      <entry key="S5" value="1.0000005628284026" />
+      <entry key="S10" value="1.0026929780760707" />
+      <entry key="S30" value="1.815733450531913" />
+      <entry key="S60" value="4.907101253426633" />
+      <entry key="M2" value="11.190094700564583" />
+      <entry key="M5" value="26.771302528782986" />
+      <entry key="M10" value="42.463716646973204" />
+      <entry key="M15" value="51.79636324559195" />
+      <entry key="M30" value="71.31871042781097" />
+      <entry key="H1" value="97.16776241080831" />
+      <entry key="H2" value="121.90044895126942" />
+      <entry key="H4" value="143.61894728776696" />
+      <entry key="D1" value="278.7271878637608" />
+      <entry key="W1" value="376.6596886529209" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="0.0" />
+      <entry key="M2" value="0.0" />
+      <entry key="M5" value="0.0" />
+      <entry key="M10" value="0.0" />
+      <entry key="M15" value="0.0" />
+      <entry key="M30" value="0.0" />
+      <entry key="H1" value="0.0" />
+      <entry key="H2" value="0.0" />
+      <entry key="H4" value="0.0" />
+      <entry key="D1" value="0.0" />
+      <entry key="W1" value="0.0" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="0.7071067811865476" />
+      <entry key="MS500" value="0.9330329915368074" />
+      <entry key="S2" value="0.9828205985452511" />
+      <entry key="S5" value="0.9930930577624749" />
+      <entry key="S10" value="0.9992320439489861" />
+      <entry key="S30" value="1.8143323283228119" />
+      <entry key="S60" value="4.905240483388601" />
+      <entry key="M2" value="11.187102345797628" />
+      <entry key="M5" value="26.767590111215338" />
+      <entry key="M10" value="42.460640881980424" />
+      <entry key="M15" value="51.79385930372853" />
+      <entry key="M30" value="71.31703189961311" />
+      <entry key="H1" value="97.166664927576" />
+      <entry key="H2" value="121.89978072467987" />
+      <entry key="H4" value="143.61856042766067" />
+      <entry key="D1" value="278.7270663074351" />
+      <entry key="W1" value="376.6596653789442" />
+    </decayedShown>
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 0,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3GGxzHEdO9SInDpZnq5FhSnaAJQ" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;E:\\devcrm-vercel\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-WS-261.26222.58" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="a53acdcd-82c7-4bad-a1eb-861d59d2ba99" name="Changes" comment="" />
+      <created>1783611970895</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1783611970895</updated>
+      <workItem from="1783611973827" duration="61000" />
+      <workItem from="1783612071194" duration="11366000" />
+    </task>
+    <task id="LOCAL-00001" summary="Initial commit">
+      <option name="closed" value="true" />
+      <created>1783612693530</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1783612693530</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Merge remote-tracking branch 'origin/main'&#10;&#10;# Conflicts:&#10;#&#9;package-lock.json&#10;#&#9;package.json">
+      <option name="closed" value="true" />
+      <created>1783614979413</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1783614979413</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Merge remote-tracking branch 'origin/main'&#10;&#10;# Conflicts:&#10;#&#9;package-lock.json&#10;#&#9;package.json">
+      <option name="closed" value="true" />
+      <created>1783614991172</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1783614991172</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Merge remote-tracking branch 'origin/main'">
+      <option name="closed" value="true" />
+      <created>1783618001663</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1783618001663</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Merge remote-tracking branch 'origin/main'">
+      <option name="closed" value="true" />
+      <created>1783693736109</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1783693736109</updated>
+    </task>
+    <task id="LOCAL-00006" summary="Merge remote-tracking branch 'origin/main'">
+      <option name="closed" value="true" />
+      <created>1783694231183</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1783694231183</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Merge remote-tracking branch 'origin/main'">
+      <option name="closed" value="true" />
+      <created>1783697409300</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1783697409300</updated>
+    </task>
+    <task id="LOCAL-00008" summary="Merge remote-tracking branch 'origin/main'">
+      <option name="closed" value="true" />
+      <created>1783697856521</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1783697856521</updated>
+    </task>
+    <task id="LOCAL-00009" summary="Merge remote-tracking branch 'origin/main'">
+      <option name="closed" value="true" />
+      <created>1783697864323</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1783697864323</updated>
+    </task>
+    <task id="LOCAL-00010" summary="Merge remote-tracking branch 'origin/main'">
+      <option name="closed" value="true" />
+      <created>1783698002735</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1783698002735</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Initial commit" />
+    <MESSAGE value="Merge remote-tracking branch 'origin/main'&#10;&#10;# Conflicts:&#10;#&#9;package-lock.json&#10;#&#9;package.json" />
+    <MESSAGE value="Merge remote-tracking branch 'origin/main'" />
+    <option name="LAST_COMMIT_MESSAGE" value="Merge remote-tracking branch 'origin/main'" />
+  </component>
+</project>
