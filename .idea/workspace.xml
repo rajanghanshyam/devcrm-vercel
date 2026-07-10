@@ -5,43 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a53acdcd-82c7-4bad-a1eb-861d59d2ba99" name="Changes" comment="Merge remote-tracking branch 'origin/main'">
-      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/devcrm-vercel.iml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.vercel/README.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.vercel/project.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/prisma.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/prisma.config.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/prisma/schema.prisma" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/browser.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/client.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/commonInputTypes.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/enums.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/internal/class.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/internal/prismaNamespace.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/internal/prismaNamespaceBrowser.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/app_data.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/company_profiles.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/customers.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/delivery_challan_items.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/delivery_challans.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/inventory_items.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/inventory_logs.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/invoice_items.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/invoices.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/leads.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/products.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/quotation_items.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/quotations.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/reminders.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/subscription_policies.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/subscriptions.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/terms_presets.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generated/prisma/models/user_profiles.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -138,27 +102,28 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
-    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;E:\\devcrm-vercel\\node_modules\\typescript\\lib&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "main",
+    "javascript.preferred.runtime.type.id": "node",
+    "junie.onboarding.icon.badge.shown": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "to.speed.mode.migration.done": "true",
+    "ts.external.directory.path": "E:\\devcrm-vercel\\node_modules\\typescript\\lib",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -174,7 +139,8 @@
       <option name="presentableId" value="Default" />
       <updated>1783611970895</updated>
       <workItem from="1783611973827" duration="61000" />
-      <workItem from="1783612071194" duration="11366000" />
+      <workItem from="1783612071194" duration="11691000" />
+      <workItem from="1783700014371" duration="41000" />
     </task>
     <task id="LOCAL-00001" summary="Initial commit">
       <option name="closed" value="true" />
@@ -256,7 +222,23 @@
       <option name="project" value="LOCAL" />
       <updated>1783698002735</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="Merge remote-tracking branch 'origin/main'">
+      <option name="closed" value="true" />
+      <created>1783699746761</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1783699746761</updated>
+    </task>
+    <task id="LOCAL-00012" summary="Merge remote-tracking branch 'origin/main'">
+      <option name="closed" value="true" />
+      <created>1783699763842</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1783699763842</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
