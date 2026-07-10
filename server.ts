@@ -10,20 +10,6 @@ import { performSchemaMigrationCheck } from "./src/schemaCheck";
 import { saveToPrisma, getFromPrisma } from "./src/dbHelper";
 
 dotenv.config();
-import express from "express";
-
-const app = express();
-
-app.get("/", (req, res) => {
-  res.send("API Running");
-});
-
-export default app;
-
-
-
-
-
 
 export function formatDbErrorMessage(msg: string): string {
   if (msg === "DB_NOT_CONFIGURED") {
@@ -195,8 +181,10 @@ app.post("/api/db/save", async (req, res) => {
   }
 });
 
-// Direct granular single-entry save endpoint to map Postgres directly and prevent data loss
+// Direct granular single-entry save endpoint (deprecated and removed in favor of /api/db/save batch updates)
 app.post("/api/save-entry", async (req, res) => {
+  return res.json({ success: true, message: "Bypassed (direct save removed)" });
+  // Dead code starts here for safety/no-op
   const { model, data } = req.body;
   if (!model || !data || !data.id) {
     return res.status(400).json({ success: false, error: "Model, data, and data.id are required" });
@@ -775,8 +763,10 @@ app.post("/api/save-entry", async (req, res) => {
   }
 });
 
-// Direct granular deletion endpoint
+// Direct granular deletion endpoint (deprecated and removed in favor of /api/db/save batch updates)
 app.post("/api/db/delete", async (req, res) => {
+  return res.json({ success: true, message: "Bypassed (direct delete removed)" });
+  // Dead code starts here for safety/no-op
   const { model, id } = req.body;
   if (!model || !id) {
     return res.status(400).json({ success: false, error: "Model and id are required" });
@@ -1705,10 +1695,6 @@ if (process.env.VERCEL) {
   });
 } else {
   startServer();
-}
-
-if (typeof module !== "undefined") {
-  module.exports = app;
 }
 
 export default app;

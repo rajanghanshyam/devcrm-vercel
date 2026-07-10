@@ -129,29 +129,16 @@ export default function App() {
     enableGst: activeProfile.enableGst !== false
   };
 
-  // Direct single-record cloud persistence saving method
-  const directSaveRecord = async (model: string, item: any) => {
+  // Dynamic database synchronization helper to update dynamic tables safely
+  const syncModelWithServer = async (payload: any) => {
     try {
-      await fetch("/api/save-entry", {
+      await fetch("/api/db/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model, data: item })
+        body: JSON.stringify(payload)
       });
     } catch (err) {
-      console.error(`Direct save record failed for ${model}:`, err);
-    }
-  };
-
-  // Direct single-record cloud database deletion method
-  const directDeleteRecord = async (model: string, id: string) => {
-    try {
-      await fetch("/api/db/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model, id })
-      });
-    } catch (err) {
-      console.error(`Direct delete record failed for ${model}:`, err);
+      console.error("Failed to sync state with server:", err);
     }
   };
 
@@ -284,145 +271,47 @@ export default function App() {
       });
   }, []);
 
-  // Database persistence helper wrappers using direct record-level updates
+  // Database persistence helper wrappers using transaction-safe batch updates
   const updateCompanyProfiles = (updated: CompanyProfile[]) => {
-    const oldList = companyProfilesRef.current;
     setCompanyProfiles(updated);
     companyProfilesRef.current = updated;
-
-    const deleted = oldList.filter(oldItem => !updated.some(newItem => newItem.id === oldItem.id));
-    for (const item of deleted) {
-      directDeleteRecord("company_profiles", item.id);
-    }
-
-    const changedOrAdded = updated.filter(newItem => {
-      const oldItem = oldList.find(o => o.id === newItem.id);
-      if (!oldItem) return true;
-      return JSON.stringify(newItem) !== JSON.stringify(oldItem);
-    });
-    for (const item of changedOrAdded) {
-      directSaveRecord("company_profiles", item);
-    }
+    syncModelWithServer({ company_profiles: updated });
   };
 
   const updateCustomers = (updated: Customer[]) => {
-    const oldList = customersRef.current;
     setCustomers(updated);
     customersRef.current = updated;
-
-    const deleted = oldList.filter(oldItem => !updated.some(newItem => newItem.id === oldItem.id));
-    for (const item of deleted) {
-      directDeleteRecord("customers", item.id);
-    }
-
-    const changedOrAdded = updated.filter(newItem => {
-      const oldItem = oldList.find(o => o.id === newItem.id);
-      if (!oldItem) return true;
-      return JSON.stringify(newItem) !== JSON.stringify(oldItem);
-    });
-    for (const item of changedOrAdded) {
-      directSaveRecord("customers", item);
-    }
+    syncModelWithServer({ customers: updated });
   };
 
   const updateProducts = (updated: Product[]) => {
-    const oldList = productsRef.current;
     setProducts(updated);
     productsRef.current = updated;
-
-    const deleted = oldList.filter(oldItem => !updated.some(newItem => newItem.id === oldItem.id));
-    for (const item of deleted) {
-      directDeleteRecord("products", item.id);
-    }
-
-    const changedOrAdded = updated.filter(newItem => {
-      const oldItem = oldList.find(o => o.id === newItem.id);
-      if (!oldItem) return true;
-      return JSON.stringify(newItem) !== JSON.stringify(oldItem);
-    });
-    for (const item of changedOrAdded) {
-      directSaveRecord("products", item);
-    }
+    syncModelWithServer({ products: updated });
   };
 
   const updateQuotations = (updated: Quotation[]) => {
-    const oldList = quotationsRef.current;
     setQuotations(updated);
     quotationsRef.current = updated;
-
-    const deleted = oldList.filter(oldItem => !updated.some(newItem => newItem.id === oldItem.id));
-    for (const item of deleted) {
-      directDeleteRecord("quotations", item.id);
-    }
-
-    const changedOrAdded = updated.filter(newItem => {
-      const oldItem = oldList.find(o => o.id === newItem.id);
-      if (!oldItem) return true;
-      return JSON.stringify(newItem) !== JSON.stringify(oldItem);
-    });
-    for (const item of changedOrAdded) {
-      directSaveRecord("quotations", item);
-    }
+    syncModelWithServer({ quotations: updated });
   };
 
   const updateInvoices = (updated: ProformaInvoice[]) => {
-    const oldList = invoicesRef.current;
     setInvoices(updated);
     invoicesRef.current = updated;
-
-    const deleted = oldList.filter(oldItem => !updated.some(newItem => newItem.id === oldItem.id));
-    for (const item of deleted) {
-      directDeleteRecord("proforma_invoices", item.id);
-    }
-
-    const changedOrAdded = updated.filter(newItem => {
-      const oldItem = oldList.find(o => o.id === newItem.id);
-      if (!oldItem) return true;
-      return JSON.stringify(newItem) !== JSON.stringify(oldItem);
-    });
-    for (const item of changedOrAdded) {
-      directSaveRecord("proforma_invoices", item);
-    }
+    syncModelWithServer({ proforma_invoices: updated });
   };
 
   const updateChallans = (updated: DeliveryChallan[]) => {
-    const oldList = challansRef.current;
     setChallans(updated);
     challansRef.current = updated;
-
-    const deleted = oldList.filter(oldItem => !updated.some(newItem => newItem.id === oldItem.id));
-    for (const item of deleted) {
-      directDeleteRecord("challans", item.id);
-    }
-
-    const changedOrAdded = updated.filter(newItem => {
-      const oldItem = oldList.find(o => o.id === newItem.id);
-      if (!oldItem) return true;
-      return JSON.stringify(newItem) !== JSON.stringify(oldItem);
-    });
-    for (const item of changedOrAdded) {
-      directSaveRecord("challans", item);
-    }
+    syncModelWithServer({ challans: updated });
   };
 
   const updateLeads = (updated: Lead[]) => {
-    const oldList = leadsRef.current;
     setLeads(updated);
     leadsRef.current = updated;
-
-    const deleted = oldList.filter(oldItem => !updated.some(newItem => newItem.id === oldItem.id));
-    for (const item of deleted) {
-      directDeleteRecord("leads", item.id);
-    }
-
-    const changedOrAdded = updated.filter(newItem => {
-      const oldItem = oldList.find(o => o.id === newItem.id);
-      if (!oldItem) return true;
-      return JSON.stringify(newItem) !== JSON.stringify(oldItem);
-    });
-    for (const item of changedOrAdded) {
-      directSaveRecord("leads", item);
-    }
+    syncModelWithServer({ leads: updated });
   };
 
   const updateSubscriptions = (updatedSubs: Subscription[]) => {
@@ -437,7 +326,6 @@ export default function App() {
       return sub;
     });
 
-    const oldSubs = subscriptionsRef.current;
     setSubscriptions(checkedSubs);
     subscriptionsRef.current = checkedSubs;
 
@@ -467,77 +355,25 @@ export default function App() {
        }
     });
 
-    const oldReminders = remindersRef.current;
     setReminders(newReminders);
     remindersRef.current = newReminders;
 
-    // Direct save/delete for subscriptions
-    const deletedSubs = oldSubs.filter(oldItem => !checkedSubs.some(newItem => newItem.id === oldItem.id));
-    for (const item of deletedSubs) {
-      directDeleteRecord("subscriptions", item.id);
-    }
-    const changedOrAddedSubs = checkedSubs.filter(newItem => {
-      const oldItem = oldSubs.find(o => o.id === newItem.id);
-      if (!oldItem) return true;
-      return JSON.stringify(newItem) !== JSON.stringify(oldItem);
+    syncModelWithServer({
+      subscriptions: checkedSubs,
+      reminders: newReminders
     });
-    for (const item of changedOrAddedSubs) {
-      directSaveRecord("subscriptions", item);
-    }
-
-    // Direct save/delete for reminders
-    const deletedRems = oldReminders.filter(oldItem => !newReminders.some(newItem => newItem.id === oldItem.id));
-    for (const item of deletedRems) {
-      directDeleteRecord("reminders", item.id);
-    }
-    const changedOrAddedRems = newReminders.filter(newItem => {
-      const oldItem = oldReminders.find(o => o.id === newItem.id);
-      if (!oldItem) return true;
-      return JSON.stringify(newItem) !== JSON.stringify(oldItem);
-    });
-    for (const item of changedOrAddedRems) {
-      directSaveRecord("reminders", item);
-    }
   };
 
   const updateReminders = (updated: Reminder[]) => {
-    const oldList = remindersRef.current;
     setReminders(updated);
     remindersRef.current = updated;
-
-    const deleted = oldList.filter(oldItem => !updated.some(newItem => newItem.id === oldItem.id));
-    for (const item of deleted) {
-      directDeleteRecord("reminders", item.id);
-    }
-
-    const changedOrAdded = updated.filter(newItem => {
-      const oldItem = oldList.find(o => o.id === newItem.id);
-      if (!oldItem) return true;
-      return JSON.stringify(newItem) !== JSON.stringify(oldItem);
-    });
-    for (const item of changedOrAdded) {
-      directSaveRecord("reminders", item);
-    }
+    syncModelWithServer({ reminders: updated });
   };
   
   const updateInventory = (updated: InventoryItem[]) => {
-    const oldList = inventoryItemsRef.current;
     setInventoryItems(updated);
     inventoryItemsRef.current = updated;
-
-    const deleted = oldList.filter(oldItem => !updated.some(newItem => newItem.id === oldItem.id));
-    for (const item of deleted) {
-      directDeleteRecord("inventory", item.id);
-    }
-
-    const changedOrAdded = updated.filter(newItem => {
-      const oldItem = oldList.find(o => o.id === newItem.id);
-      if (!oldItem) return true;
-      return JSON.stringify(newItem) !== JSON.stringify(oldItem);
-    });
-    for (const item of changedOrAdded) {
-      directSaveRecord("inventory", item);
-    }
+    syncModelWithServer({ inventory: updated });
   };
 
   // Convert Quotation into active Proforma Invoice (SaaS/Corporate ease!)
