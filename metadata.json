@@ -1,6 +1,0 @@
-{
-  "name": "QuoteManager",
-  "description": "Professional Indian quotation and document manager supporting Quotations, Proforma Invoices, Delivery Challans, Leads, Customers, Products, Subscriptions, and Reminders in INR and DD/MM/YYYY format.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
