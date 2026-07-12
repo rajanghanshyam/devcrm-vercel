@@ -129,7 +129,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1783845410611</updated>
-      <workItem from="1783845411915" duration="11917000" />
+      <workItem from="1783845411915" duration="12423000" />
     </task>
     <task id="LOCAL-00001" summary="Merge remote-tracking branch 'origin/main'&#10;&#10;# Conflicts:&#10;#&#9;.gitignore&#10;#&#9;README.md&#10;#&#9;package-lock.json&#10;#&#9;package.json&#10;#&#9;schema.sql&#10;#&#9;server.ts&#10;#&#9;src/App.tsx&#10;#&#9;src/backup.ts&#10;#&#9;src/components/AmazonSellerView.tsx&#10;#&#9;src/components/ChallanView.tsx&#10;#&#9;src/components/CustomerView.tsx&#10;#&#9;src/components/DashboardView.tsx&#10;#&#9;src/components/InventoryView.tsx&#10;#&#9;src/components/LeadView.tsx&#10;#&#9;src/components/LoginView.tsx&#10;#&#9;src/components/ProductView.tsx&#10;#&#9;src/components/ProformaInvoiceView.tsx&#10;#&#9;src/components/QuotationsView.tsx&#10;#&#9;src/components/SettingsView.tsx&#10;#&#9;src/components/SubscriptionView.tsx&#10;#&#9;src/db.ts&#10;#&#9;src/hooks/useAuth.tsx&#10;#&#9;src/index.css&#10;#&#9;src/schemaCheck.ts&#10;#&#9;src/types.ts&#10;#&#9;src/utils.ts&#10;#&#9;table_creation_queries.sql&#10;#&#9;vite.config.ts">
       <option name="closed" value="true" />
@@ -179,7 +179,15 @@
       <option name="project" value="LOCAL" />
       <updated>1783864439634</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="Merge remote-tracking branch 'origin/main'">
+      <option name="closed" value="true" />
+      <created>1783864738405</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1783864738405</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
