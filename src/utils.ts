@@ -119,7 +119,8 @@ export function calculateTaxTotals(
   customerState: string,
   companyState: string,
   additionalDiscount: number = 0,
-  freight: number = 0
+  freight: number = 0,
+  enableGst: boolean = true
 ) {
   let subtotal = 0;
   let discountTotal = 0;
@@ -127,17 +128,26 @@ export function calculateTaxTotals(
   let sgstTotal = 0;
   let igstTotal = 0;
 
-  const isIntrastate = customerState.trim().toLowerCase() === companyState.trim().toLowerCase();
+  const isIntrastate = String(customerState || "").trim().toLowerCase() === String(companyState || "").trim().toLowerCase();
 
-  items.forEach((item) => {
-    const baseVal = item.rate * item.quantity;
-    const discountVal = (baseVal * item.discountPercent) / 100;
+  const numAdditionalDiscount = Number(additionalDiscount) || 0;
+  const numFreight = Number(freight) || 0;
+
+  (items || []).forEach((item) => {
+    const rate = Number(item.rate) || 0;
+    const quantity = Number(item.quantity) || 0;
+    const discountPercent = Number(item.discountPercent) || 0;
+    const gstPercent = Number(item.gstPercent) || 0;
+
+    const baseVal = rate * quantity;
+    const discountVal = (baseVal * discountPercent) / 100;
     const taxableVal = baseVal - discountVal;
 
     subtotal += baseVal;
     discountTotal += discountVal;
 
-    const totalGst = (taxableVal * item.gstPercent) / 100;
+    const gstPercentToUse = enableGst !== false ? gstPercent : 0;
+    const totalGst = (taxableVal * gstPercentToUse) / 100;
 
     if (isIntrastate) {
       cgstTotal += totalGst / 2;
@@ -147,7 +157,7 @@ export function calculateTaxTotals(
     }
   });
 
-  const grandTotal = subtotal - discountTotal - additionalDiscount + freight + cgstTotal + sgstTotal + igstTotal;
+  const grandTotal = subtotal - discountTotal - numAdditionalDiscount + numFreight + cgstTotal + sgstTotal + igstTotal;
 
   return {
     subtotal: Math.round(subtotal * 100) / 100,
@@ -231,28 +241,7 @@ export const SEED_SUBSCRIPTIONS: Subscription[] = [];
 export const SEED_REMINDERS: Reminder[] = [];
 export const SEED_INVENTORY: InventoryItem[] = [];
 
-// Persistent state management for localStorage
-export function initializeStorage() {
-  if (typeof window === "undefined") return;
-
-  const checkAndSet = (key: string, seed: any) => {
-    if (!localStorage.getItem(key)) {
-      localStorage.setItem(key, JSON.stringify(seed));
-    }
-  };
-
-  checkAndSet("qm_company_settings", DEFAULT_COMPANY_SETTINGS);
-  checkAndSet("qm_company_profiles", SEED_COMPANY_PROFILES);
-  checkAndSet("qm_customers", SEED_CUSTOMERS);
-  checkAndSet("qm_products", SEED_PRODUCTS);
-  checkAndSet("qm_quotations", SEED_QUOTATIONS);
-  checkAndSet("qm_proforma_invoices", SEED_PROFORMA_INVOICES);
-  checkAndSet("qm_challans", SEED_CHALLANS);
-  checkAndSet("qm_leads", SEED_LEADS);
-  checkAndSet("qm_subscriptions", SEED_SUBSCRIPTIONS);
-  checkAndSet("qm_reminders", SEED_REMINDERS);
-  checkAndSet("qm_inventory", SEED_INVENTORY);
-}
+// Persistent state management has been completely transitioned to live Neon PostgreSQL direct connectivity.
 
 // Utility to export all application state to a downloadable JSON file
 export function exportAppState(data: {

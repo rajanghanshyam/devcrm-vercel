@@ -12,6 +12,7 @@ interface AuthContextType {
   loading: boolean;
   refreshUsers: () => Promise<void>;
   switchUser: (u: User) => void;
+  dbError: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -20,18 +21,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState<string | null>(null);
 
-  // Load all users from the backend
+  // Load all users directly from the backend
   const refreshUsers = async () => {
     try {
       const res = await fetch("/api/users");
-      const data = await res.json();
-      if (data.success) {
-        setUsers(data.users || []);
-        return data.users;
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || `HTTP error! Status: ${res.status}`);
       }
-    } catch (err) {
-      console.error("Error fetching user list:", err);
+      const data = await res.json();
+      if (data.success && data.users) {
+        setUsers(data.users || []);
+        setDbError(null);
+        return data.users;
+      } else {
+        throw new Error(data.error || "Failed to load users from database");
+      }
+    } catch (err: any) {
+      console.error("Error fetching user list from direct database:", err);
+      setDbError(err.message || String(err));
+      setUsers([]);
+      return [];
     }
   };
 
@@ -57,8 +69,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error("Failed to parse stored user:", e);
           localStorage.removeItem("qm_logged_in_user");
         }
-      } else {
-        setUser(null);
+      } else if (loadedUsers && loadedUsers.length > 0) {
+        // Auto-login first active user if no session exists for seamless onboarding
+        const defaultAdm = loadedUsers.find((u: any) => u.isActive);
+        if (defaultAdm) {
+          setUser(defaultAdm);
+          localStorage.setItem("qm_logged_in_user", JSON.stringify(defaultAdm));
+        }
       }
       setLoading(false);
     };
@@ -67,32 +84,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password?: string) => {
-    try {
-      const res = await fetch("/api/users/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password: password || "" })
-      });
-      const data = await res.json();
-      if (!data.success) {
-        throw new Error(data.error || "Login failed");
-      }
-      
-      setUser(data.user);
-      localStorage.setItem("qm_logged_in_user", JSON.stringify(data.user));
-      await refreshUsers();
-      return true;
-    } catch (err: any) {
-      console.error("Custom Login Error:", err);
-      // For fallback/offline resilience, allow auto login
-      const matchedLocal = users.find(u => (u.email || "").toLowerCase() === (email || "").toLowerCase());
-      if (matchedLocal) {
-        setUser(matchedLocal);
-        localStorage.setItem("qm_logged_in_user", JSON.stringify(matchedLocal));
-        return true;
-      }
-      throw err;
+    const res = await fetch("/api/users/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password: password || "" })
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Login failed (HTTP ${res.status})`);
     }
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || "Login failed");
+    }
+    
+    setUser(data.user);
+    localStorage.setItem("qm_logged_in_user", JSON.stringify(data.user));
+    await refreshUsers();
+    return true;
   };
 
   const logout = async () => {
@@ -184,7 +193,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteUser,
         loading,
         refreshUsers,
-        switchUser
+        switchUser,
+        dbError
       }}
     >
       {children}

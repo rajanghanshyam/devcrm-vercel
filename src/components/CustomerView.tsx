@@ -43,7 +43,7 @@ export default function CustomerView({
   const [instantSuccess, setInstantSuccess] = useState<string | null>(null);
 
   const getIndianStateFromGstin = (gstin: string): string => {
-    const code = gstin.trim().substring(0, 2);
+    const code = (gstin || "").trim().substring(0, 2);
     const mapping: { [key: string]: string } = {
       "01": "Jammu and Kashmir", "02": "Himachal Pradesh", "03": "Punjab", "04": "Punjab", "05": "Uttarakhand",
       "06": "Haryana", "07": "Delhi", "08": "Rajasthan", "09": "Uttar Pradesh", "10": "Bihar",
@@ -68,7 +68,7 @@ export default function CustomerView({
     setInstantSuccess(null);
 
     // Check if already exists in the list of customers
-    const existing = customers.find(c => c.gstin.trim().toUpperCase() === clean);
+    const existing = customers.find(c => (c.gstin || "").trim().toUpperCase() === clean);
     if (existing) {
       setInstantSuccess(`Customer already exists: "${existing.company}"`);
       setSearchTerm(clean); // Filter list to show them immediately
@@ -161,14 +161,14 @@ export default function CustomerView({
   const openEditForm = (cust: Customer) => {
     setFormType("edit");
     setActiveCustomerId(cust.id);
-    setFormName(cust.name);
-    setFormCompany(cust.company);
-    setFormEmail(cust.email);
-    setFormPhone(cust.phone);
-    setFormGstin(cust.gstin);
-    setFormState(cust.state);
-    setFormBilling(cust.billingAddress);
-    setFormShipping(cust.shippingAddress);
+    setFormName(cust.name || "");
+    setFormCompany(cust.company || "");
+    setFormEmail(cust.email || "");
+    setFormPhone(cust.phone || "");
+    setFormGstin(cust.gstin || "");
+    setFormState(cust.state || "Maharashtra");
+    setFormBilling(cust.billingAddress || "");
+    setFormShipping(cust.shippingAddress || "");
     setIsFormOpen(true);
   };
 
@@ -221,7 +221,7 @@ export default function CustomerView({
   };
 
   const deleteCustomer = (id: string) => {
-    if (confirm("Are you sure you want to delete this customer master file permanently? This may break historical documents referencing them.")) {
+    if (confirm("Are you sure you want to delete this company?")) {
       const upd = customers.filter(c => c.id !== id);
       onUpdateCustomers(upd);
     }

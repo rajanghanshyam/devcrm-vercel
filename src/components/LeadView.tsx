@@ -66,19 +66,19 @@ export default function LeadView({
     setFormType("edit");
     setActiveLeadId(lead.id);
     setFormCustomerId(lead.customerId || "");
-    setFormName(lead.name);
-    setFormCompany(lead.company);
-    setFormEmail(lead.email);
-    setFormPhone(lead.phone);
-    setFormValue(String(lead.value));
-    setFormStatus(lead.status);
+    setFormName(lead.name || "");
+    setFormCompany(lead.company || "");
+    setFormEmail(lead.email || "");
+    setFormPhone(lead.phone || "");
+    setFormValue(lead.value !== undefined && lead.value !== null ? String(lead.value) : "0");
+    setFormStatus(lead.status || "New");
     setFormConversionStatus(lead.conversionStatus || 
       (lead.status === "Won" ? "Converted" : 
        lead.status === "Proposal Sent" ? "Hot" : 
        (lead.status === "Qualified" || lead.status === "Contacted") ? "Warm" : "Cold")
     );
-    setFormSource(lead.source);
-    setFormNotes(lead.notes);
+    setFormSource(lead.source || "Website");
+    setFormNotes(lead.notes || "");
     setIsFormOpen(true);
   };
 

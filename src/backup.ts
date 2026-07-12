@@ -13,21 +13,23 @@ export const triggerCloudBackup = async () => {
     }
   }
 
-  // Backup data collected
-  const allData = {
-    settings: localStorage.getItem("qm_company_settings"),
-    profiles: localStorage.getItem("qm_company_profiles"),
-    customers: localStorage.getItem("qm_customers"),
-    products: localStorage.getItem("qm_products"),
-    quotations: localStorage.getItem("qm_quotations"),
-    proformas: localStorage.getItem("qm_proformas"),
-    challans: localStorage.getItem("qm_challans"),
-    leads: localStorage.getItem("qm_leads"),
-    subscriptions: localStorage.getItem("qm_subscriptions"),
-    reminders: localStorage.getItem("qm_reminders"),
-    inventory: localStorage.getItem("qm_inventory"),
-    amazonOrders: [] // Firestore data would be added here
-  };
+  // Backup data collected directly from direct database
+  let allData = {};
+  try {
+    const dbRes = await fetch("/api/db/get");
+    if (!dbRes.ok) {
+      throw new Error(`HTTP error! Status: ${dbRes.status}`);
+    }
+    const dbData = await dbRes.json();
+    if (dbData.success) {
+      allData = dbData.data;
+    } else {
+      throw new Error(dbData.error || "Failed to fetch DB data");
+    }
+  } catch (err) {
+    console.error("Failed to fetch direct database for backup:", err);
+    return false;
+  }
   
   const fileContent = JSON.stringify(allData, null, 2);
   const metadata = {
@@ -82,18 +84,20 @@ export const restoreFromCloud = async (fileId: string) => {
 
         if (res.ok) {
             const data = await res.json();
-            if (data.settings) localStorage.setItem("qm_company_settings", data.settings);
-            if (data.profiles) localStorage.setItem("qm_company_profiles", data.profiles);
-            if (data.customers) localStorage.setItem("qm_customers", data.customers);
-            if (data.products) localStorage.setItem("qm_products", data.products);
-            if (data.quotations) localStorage.setItem("qm_quotations", data.quotations);
-            if (data.proformas) localStorage.setItem("qm_proformas", data.proformas);
-            if (data.challans) localStorage.setItem("qm_challans", data.challans);
-            if (data.leads) localStorage.setItem("qm_leads", data.leads);
-            if (data.subscriptions) localStorage.setItem("qm_subscriptions", data.subscriptions);
-            if (data.reminders) localStorage.setItem("qm_reminders", data.reminders);
-            if (data.inventory) localStorage.setItem("qm_inventory", data.inventory);
-            return true;
+            // Restore directly to Neon PostgreSQL backend database
+            const saveRes = await fetch("/api/db/save", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+            if (saveRes.ok) {
+                const saveJson = await saveRes.json();
+                if (saveJson.success) {
+                    return true;
+                }
+            }
+            console.error("Restore failed: Could not save restored payload to direct database.");
+            return false;
         } else {
             console.error("Restore failed: ", await res.text());
             return false;

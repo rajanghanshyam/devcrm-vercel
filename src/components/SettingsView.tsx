@@ -29,6 +29,7 @@ import { CompanySettings, CompanyProfile, TermsPreset, User, SubscriptionPolicy 
 import { useAuth } from "../hooks/useAuth";
 import { triggerCloudBackup, restoreFromCloud } from "../backup";
 import { exportAppState, importAppState } from "../utils";
+import DatabaseStatus from "./DatabaseStatus";
 
 
 interface SettingsViewProps {
@@ -256,7 +257,7 @@ export default function SettingsView({
       alert("At least one primary legal entity profile is required to route draft and active bills.");
       return;
     }
-    if (confirm("Confirm permanent deletion of this bidding corporate profile? All historical invoices referencing this ID will default fallback to your remaining profile.")) {
+    if (confirm("Are you sure you want to delete this company? All historical invoices referencing this ID will default fallback to your remaining profile.")) {
       const idx = companyProfiles.findIndex(p => p.id === id);
       const filtered = companyProfiles.filter(p => p.id !== id);
       onUpdateCompanyProfiles(filtered);
@@ -664,6 +665,34 @@ export default function SettingsView({
                   value={currentProfile.pan}
                   onChange={(e) => updateProfileField("pan", e.target.value.toUpperCase())}
                 />
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/60 grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="enableGstCheckbox"
+                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                  checked={currentProfile.enableGst !== false}
+                  onChange={(e) => updateProfileField("enableGst", e.target.checked)}
+                />
+                <label htmlFor="enableGstCheckbox" className="text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                  Enable Goods & Services Tax (GST)
+                </label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="profitWithoutGstCheckbox"
+                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                  checked={currentProfile.profitWithoutGst !== false}
+                  onChange={(e) => updateProfileField("profitWithoutGst", e.target.checked)}
+                />
+                <label htmlFor="profitWithoutGstCheckbox" className="text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                  Calculate Company Profit / Revenue without GST
+                </label>
               </div>
             </div>
 
@@ -1191,6 +1220,9 @@ export default function SettingsView({
 
       {activeSettingsTab === 'backups' && (
         <div className="space-y-6">
+          {/* Database Status and Live Ping */}
+          <DatabaseStatus />
+
           {/* Section 1: Local Backup */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
             <div className="flex justify-between items-center border-b border-slate-100 pb-4">

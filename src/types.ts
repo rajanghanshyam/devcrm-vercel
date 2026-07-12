@@ -70,6 +70,7 @@ export interface Quotation {
   revisionOfId?: string;
   originalQuoteId?: string;
   revisionNumber?: number;
+  templateType?: "Standard";
 }
 
 export interface ProformaInvoice {
@@ -251,6 +252,8 @@ export interface CompanyProfile {
   nextQuotationNumber?: number;
   nextInvoiceNumber?: number;
   nextChallanNumber?: number;
+  enableGst?: boolean;
+  profitWithoutGst?: boolean;
   subscriptionPolicies?: SubscriptionPolicy[];
 }
 
@@ -277,5 +280,7 @@ export interface CompanySettings {
   nextQuotationNumber?: number;
   nextInvoiceNumber?: number;
   nextChallanNumber?: number;
+  enableGst?: boolean;
+  profitWithoutGst?: boolean;
   subscriptionPolicies?: SubscriptionPolicy[];
 }

@@ -16,7 +16,7 @@ import {
   Plus
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Quotation, ProformaInvoice, Lead, Customer, Reminder } from "../types";
+import { Quotation, ProformaInvoice, Lead, Customer, Reminder, CompanySettings } from "../types";
 import { formatINR, formatDate } from "../utils";
 
 interface DashboardViewProps {
@@ -25,6 +25,7 @@ interface DashboardViewProps {
   leads: Lead[];
   customers: Customer[];
   reminders: Reminder[];
+  companySettings?: CompanySettings;
   onNavigate: (tab: string) => void;
   onAddQuotation: () => void;
   onAddLead: () => void;
@@ -36,18 +37,32 @@ export default function DashboardView({
   leads,
   customers,
   reminders,
+  companySettings,
   onNavigate,
   onAddQuotation,
   onAddLead
 }: DashboardViewProps) {
   
-  // Calculate stats
-  const totalQuotedVal = quotations.reduce((acc, q) => acc + q.grandTotal, 0);
+  const profitWithoutGst = companySettings?.profitWithoutGst !== false;
+
+  const getDocValue = (doc: any) => {
+    if (profitWithoutGst) {
+      // Exclude GST components (cgstTotal, sgstTotal, igstTotal) from total value
+      const cgst = Number(doc.cgstTotal) || 0;
+      const sgst = Number(doc.sgstTotal) || 0;
+      const igst = Number(doc.igstTotal) || 0;
+      return Math.max(0, Number(doc.grandTotal) - cgst - sgst - igst);
+    }
+    return Number(doc.grandTotal);
+  };
+
+  // Calculate stats using getDocValue
+  const totalQuotedVal = quotations.reduce((acc, q) => acc + getDocValue(q), 0);
   const activeQuotationsCount = quotations.filter(q => q.status === "Pending" || q.status === "Approved").length;
 
-  const totalInvoicedVal = invoices.reduce((acc, i) => acc + i.grandTotal, 0);
-  const paidInvoicedVal = invoices.filter(i => i.status === "Paid").reduce((acc, i) => acc + i.grandTotal, 0);
-  const unpaidInvoicedVal = invoices.filter(i => i.status === "Unpaid" || i.status === "Overdue").reduce((acc, i) => acc + i.grandTotal, 0);
+  const totalInvoicedVal = invoices.reduce((acc, i) => acc + getDocValue(i), 0);
+  const paidInvoicedVal = invoices.filter(i => i.status === "Paid").reduce((acc, i) => acc + getDocValue(i), 0);
+  const unpaidInvoicedVal = invoices.filter(i => i.status === "Unpaid" || i.status === "Overdue").reduce((acc, i) => acc + getDocValue(i), 0);
 
   const totalLeadPipeline = leads.filter(l => l.status !== "Lost" && l.status !== "Won").reduce((acc, l) => acc + l.value, 0);
   const openLeadsCount = leads.filter(l => l.status !== "Lost" && l.status !== "Won").length;
@@ -59,10 +74,10 @@ export default function DashboardView({
     const data: Record<string, number> = {};
     invoices.forEach(i => {
       const month = new Date(i.date).toLocaleString('default', { month: 'short' });
-      data[month] = (data[month] || 0) + i.grandTotal;
+      data[month] = (data[month] || 0) + getDocValue(i);
     });
     return Object.entries(data).map(([name, revenue]) => ({ name, revenue }));
-  }, [invoices]);
+  }, [invoices, profitWithoutGst]);
 
   // State calculations for document status distribution
   const statusCounts = {
@@ -108,7 +123,9 @@ export default function DashboardView({
         <div className="relative overflow-hidden bg-white border border-slate-200 p-4 rounded-xl group hover:border-slate-300 transition-all duration-300 shadow-sm">
           <div className="flex justify-between items-start">
             <div className="space-y-2">
-              <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase block">Quotation Pipeline</span>
+              <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase block">
+                Quotation Pipeline {profitWithoutGst && <span className="text-indigo-500 font-bold lowercase text-[9px]">(excl. GST)</span>}
+              </span>
               <div className="text-lg font-bold font-sans text-slate-900 tracking-tight leading-none">
                 {formatINR(totalQuotedVal)}
               </div>
@@ -127,7 +144,9 @@ export default function DashboardView({
         <div className="relative overflow-hidden bg-white border border-slate-200 p-4 rounded-xl group hover:border-slate-300 transition-all duration-300 shadow-sm">
           <div className="flex justify-between items-start">
             <div className="space-y-2">
-              <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase block">Revenue Realized</span>
+              <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase block">
+                Revenue Realized {profitWithoutGst && <span className="text-emerald-500 font-bold lowercase text-[9px]">(excl. GST)</span>}
+              </span>
               <div className="text-lg font-bold font-sans text-emerald-600 tracking-tight leading-none">
                 {formatINR(paidInvoicedVal)}
               </div>
@@ -146,7 +165,9 @@ export default function DashboardView({
         <div className="relative overflow-hidden bg-white border border-slate-200 p-4 rounded-xl group hover:border-slate-300 transition-all duration-300 shadow-sm">
           <div className="flex justify-between items-start">
             <div className="space-y-2">
-              <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase block">Outstanding Payments</span>
+              <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase block">
+                Outstanding Payments {profitWithoutGst && <span className="text-amber-500 font-bold lowercase text-[9px]">(excl. GST)</span>}
+              </span>
               <div className="text-lg font-bold font-sans text-amber-600 tracking-tight leading-none">
                 {formatINR(unpaidInvoicedVal)}
               </div>

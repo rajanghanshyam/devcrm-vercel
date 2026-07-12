@@ -26,6 +26,8 @@ CREATE TABLE "company_profiles" (
     "next_quotation_number" INTEGER DEFAULT 1,
     "next_invoice_number" INTEGER DEFAULT 1,
     "next_challan_number" INTEGER DEFAULT 1,
+    "enable_gst" BOOLEAN DEFAULT TRUE,
+    "profit_without_gst" BOOLEAN DEFAULT TRUE,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 

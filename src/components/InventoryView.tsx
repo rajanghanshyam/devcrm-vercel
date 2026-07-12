@@ -76,14 +76,14 @@ export default function InventoryView({ inventory, onUpdateInventory, customers 
   };
 
   const handleEdit = (item: InventoryItem) => {
-    setFormSku(item.sku);
-    setFormProductName(item.productName);
-    setFormCategory(item.category);
-    setFormQuantity(item.quantity);
-    setFormMinQuantity(item.minQuantity);
+    setFormSku(item.sku || "");
+    setFormProductName(item.productName || "");
+    setFormCategory(item.category || "Hardware");
+    setFormQuantity(item.quantity !== undefined && item.quantity !== null ? item.quantity : 0);
+    setFormMinQuantity(item.minQuantity !== undefined && item.minQuantity !== null ? item.minQuantity : 0);
     setFormPurchaseFrom(item.purchaseFrom || "");
-    setFormUnitPrice(item.unitPrice);
-    setFormLatestPurchasePrice(item.latestPurchasePrice !== undefined ? item.latestPurchasePrice : "");
+    setFormUnitPrice(item.unitPrice !== undefined && item.unitPrice !== null ? item.unitPrice : 0);
+    setFormLatestPurchasePrice(item.latestPurchasePrice !== undefined && item.latestPurchasePrice !== null ? item.latestPurchasePrice : "");
     setEditingId(item.id);
     setIsFormOpen(true);
   };

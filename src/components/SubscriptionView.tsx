@@ -66,14 +66,14 @@ export default function SubscriptionView({
   const openEditForm = (sub: Subscription) => {
     setFormType("edit");
     setActiveSubId(sub.id);
-    setFormCustomerId(sub.customerId);
-    setFormService(sub.serviceName);
-    setFormAmount(String(sub.amount));
-    setFormCycle(sub.billingCycle);
+    setFormCustomerId(sub.customerId || "");
+    setFormService(sub.serviceName || "");
+    setFormAmount(sub.amount !== undefined && sub.amount !== null ? String(sub.amount) : "0");
+    setFormCycle(sub.billingCycle || "Annually");
     setFormStart(formatDate(sub.startDate));
     setFormRenewal(formatDate(sub.nextRenewalDate));
     setFormDescription(sub.description || "");
-    setFormStatus(sub.status);
+    setFormStatus(sub.status || "Active");
     setIsFormOpen(true);
   };
 
