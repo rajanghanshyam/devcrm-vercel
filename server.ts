@@ -36,8 +36,21 @@ export function formatDbErrorMessage(msg: string): string {
 }
 
 export function isDbConnectionOrSchemaError(error: any): boolean {
-  // Direct connection required: Offline sandbox fallbacks and local file sync have been disabled.
-  return false;
+  if (!error) return false;
+  const msg = (error.message || String(error)).toLowerCase();
+  return (
+    msg.includes("db_not_configured") ||
+    msg.includes("db_masked") ||
+    msg.includes("relation") ||
+    msg.includes("does not exist") ||
+    msg.includes("connect") ||
+    msg.includes("timeout") ||
+    msg.includes("aggregateerror") ||
+    msg.includes("database_url") ||
+    msg.includes("ssl") ||
+    msg.includes("password authentication failed") ||
+    msg.includes("authentication failed")
+  );
 }
 
 // Initialize Google GenAI lazily
@@ -178,6 +191,18 @@ async function ensureInvoicesAndCustomersTablesExist() {
     `);
     console.log('[Table Assertion] Checked/Created table "customers" successfully.');
 
+    // 1b. Run ALTER TABLE to ensure columns exist in case the table already existed with an older schema
+    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "company" TEXT;`);
+    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "email" TEXT;`);
+    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "phone" TEXT;`);
+    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "gstin" TEXT;`);
+    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "state" TEXT NOT NULL DEFAULT 'Other';`);
+    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "billing_address" TEXT;`);
+    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "shipping_address" TEXT;`);
+    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`);
+    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`);
+    console.log('[Table Assertion] Explicitly ran ALTER column assertions for "customers".');
+
     // 2. Ensure "invoices" table exists
     await pool.query(`
       CREATE TABLE IF NOT EXISTS "invoices" (
@@ -208,6 +233,32 @@ async function ensureInvoicesAndCustomersTablesExist() {
       );
     `);
     console.log('[Table Assertion] Checked/Created table "invoices" successfully.');
+
+    // 2b. Run ALTER TABLE to ensure columns exist in case the table already existed with an older schema
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "invoice_no" TEXT NOT NULL DEFAULT '';`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "quotation_no" TEXT;`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "date" DATE NOT NULL DEFAULT CURRENT_DATE;`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "due_date" DATE;`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "customer_id" TEXT NOT NULL DEFAULT '';`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "subject" TEXT;`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "subtotal" DECIMAL(15,2) NOT NULL DEFAULT 0.00;`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "discount_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00;`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "cgst_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00;`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "sgst_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00;`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "igst_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00;`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "grand_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00;`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "status" TEXT DEFAULT 'Unpaid';`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "terms" TEXT;`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "company_id" TEXT;`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "terms_preset_id" TEXT;`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "freight" DECIMAL(15,2) DEFAULT 0.00;`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "additional_discount" DECIMAL(15,2) DEFAULT 0.00;`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "customer_signature" TEXT;`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "customer_signed_at" TIMESTAMP(3);`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`);
+    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`);
+    console.log('[Table Assertion] Explicitly ran ALTER column assertions for "invoices".');
+
   } catch (err: any) {
     console.error('[Table Assertion] Error checking/creating tables during runtime check:', err.message || err);
   }
@@ -986,6 +1037,15 @@ app.get("/api/db/get", async (req, res) => {
     const result = await getFromNeon();
     res.json({ success: true, data: result });
   } catch (error: any) {
+    if (isDbConnectionOrSchemaError(error)) {
+      console.log("[Database] Operating in sandbox offline mode (database fetch bypassed due to offline/unconfigured DB).");
+      return res.json({
+        success: true,
+        data: {}, // An empty data object tells the frontend to seed in-memory defaults
+        isFallbackMode: true,
+        dbError: formatDbErrorMessage(error.message || String(error))
+      });
+    }
     console.error("CRITICAL error fetching database from PostgreSQL:", error);
     res.status(500).json({ 
       success: false, 

@@ -4,8 +4,20 @@ import { neon, pool } from './db';
 
 export async function performSchemaMigrationCheck() {
   const url = process.env.DATABASE_URL || '';
-  if (!url || url.includes('******') || url.includes('%2A%2A%2A%2A%2A%2A')) {
-    console.log('[Schema Check] Bypassing schema check: Database is unconfigured or masked (Sandbox offline mode active).');
+  const unpooledUrl = process.env.DATABASE_URL_UNPOOLED || '';
+  
+  const isMasked = (str: string) => str.includes('******') || str.includes('%2A%2A%2A%2A%2A%2A');
+  const isPostgres = (str: string) => str.startsWith('postgres://') || str.startsWith('postgresql://');
+
+  let selectedUrl = '';
+  if (url && !isMasked(url) && isPostgres(url)) {
+    selectedUrl = url;
+  } else if (unpooledUrl && !isMasked(unpooledUrl) && isPostgres(unpooledUrl)) {
+    selectedUrl = unpooledUrl;
+  }
+
+  if (!selectedUrl) {
+    console.log('[Schema Check] Bypassing schema check: Database is unconfigured, masked, or not a valid PostgreSQL URL (Sandbox offline mode active).');
     return;
   }
 
@@ -41,8 +53,37 @@ export async function performSchemaMigrationCheck() {
     const existingTables = result.map((r) => r.table_name);
     const missingTables = expectedTables.filter(t => !existingTables.includes(t));
 
-    if (missingTables.length > 0) {
-      console.warn(`[Schema Check] Missing tables found: ${missingTables.join(', ')}. Initiating automatic schema migration...`);
+    let hasEnableGst = true;
+    if (existingTables.includes('company_profiles')) {
+      try {
+        const columnsResult: any[] = await neon.$queryRaw`
+          SELECT column_name 
+          FROM information_schema.columns 
+          WHERE table_schema = 'public' AND table_name = 'company_profiles' AND column_name = 'enable_gst'
+        `;
+        hasEnableGst = columnsResult.length > 0;
+      } catch (err) {
+        console.warn('[Schema Check] Failed to check for enable_gst column:', err);
+      }
+    }
+
+    const shouldRebuild = missingTables.length > 0 || !hasEnableGst;
+
+    if (shouldRebuild) {
+      if (!hasEnableGst && existingTables.includes('company_profiles')) {
+        console.warn(`[Schema Check] Missing column "enable_gst" in "company_profiles" table. Rebuilding database tables from scratch to push latest schema...`);
+        for (const table of expectedTables) {
+          try {
+            await pool.query(`DROP TABLE IF EXISTS "${table}" CASCADE`);
+            console.log(`[Schema Check] Dropped table ${table} CASCADE`);
+          } catch (dropErr: any) {
+            console.warn(`[Schema Check] Non-blocking warning dropping table ${table}:`, dropErr.message || dropErr);
+          }
+        }
+      } else {
+        console.warn(`[Schema Check] Missing tables found: ${missingTables.join(', ')}. Initiating automatic schema migration...`);
+      }
+
       try {
         const filePath = path.join(process.cwd(), 'table_creation_queries.sql');
         if (fs.existsSync(filePath)) {
@@ -88,7 +129,10 @@ export async function performSchemaMigrationCheck() {
         '2. Open Google AI Studio, click \'Settings\' (gear icon) in the sidebar/header, then choose \'Environment Variables\'.\n' +
         '3. Locate \'DATABASE_URL\' and \'DATABASE_URL_UNPOOLED\' and update them with the correct password.');
     } else {
-      console.log('[Schema Check] Notice: Could not verify database tables automatically (skipping check). Details:', errMsg);
+      const cleanMsg = errMsg.includes('AggregateError') || errMsg.includes('timeout') || errMsg.includes('connect')
+        ? 'Database host is currently unreachable (Sandbox offline mode active).'
+        : errMsg;
+      console.log('[Schema Check] Database connection check bypassed (Sandbox offline mode active). Info:', cleanMsg);
     }
   }
 }

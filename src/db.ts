@@ -34,6 +34,11 @@ function getPoolInstance(): pg.Pool {
     throw new Error("DB_MASKED");
   }
 
+  const isPostgres = selectedUrl.startsWith('postgres://') || selectedUrl.startsWith('postgresql://');
+  if (!isPostgres) {
+    throw new Error("DB_NOT_CONFIGURED");
+  }
+
   if (!_pool) {
     const config: pg.PoolConfig = {
       connectionString: selectedUrl,
