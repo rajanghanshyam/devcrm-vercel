@@ -4,20 +4,23 @@
     {
       "src": "dist/server.cjs",
       "use": "@vercel/node"
+    },
+    {
+      "src": "dist/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "dist/server.cjs"
+      "dest": "/dist/server.cjs"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "dist/server.cjs"
+      "dest": "/dist/index.html"
     }
   ]
 }
