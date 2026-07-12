@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="961bd25d-c891-46f3-b9c7-56ccea1563e1" name="Changes" comment="Merge remote-tracking branch 'origin/main'">
+      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/devcrm_vercel.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metadata.json" beforeDir="false" afterPath="$PROJECT_DIR$/metadata.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/schema.sql" beforeDir="false" afterPath="$PROJECT_DIR$/schema.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/backup.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/backup.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/AmazonSellerView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/AmazonSellerView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/CataloguesView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/CataloguesView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/ChallanView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ChallanView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/CustomerView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/CustomerView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/DashboardView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/DashboardView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/DatabaseStatus.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/DatabaseStatus.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/EmailModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/EmailModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/InventoryView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/InventoryView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/LeadView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/LeadView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/LoginView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/LoginView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/ProductView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ProductView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/ProformaInvoiceView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ProformaInvoiceView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/QuotationsView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/QuotationsView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/ReminderView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ReminderView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/SettingsView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/SettingsView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/Sidebar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/Sidebar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/SubscriptionView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/SubscriptionView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/db.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/db.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/dbHelper.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/dbHelper.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/env.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/env.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/google_auth.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/google_auth.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/useAuth.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/useAuth.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/index.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/index.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib/firebase.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/firebase.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/recreateDb.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/recreateDb.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/schemaCheck.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/schemaCheck.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/table_creation_queries.sql" beforeDir="false" afterPath="$PROJECT_DIR$/table_creation_queries.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ts_errors.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ts_errors.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/tsconfig.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vercel.json" beforeDir="false" afterPath="$PROJECT_DIR$/vercel.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vite.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/vite.config.ts" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;rajanghanshyam&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/rajanghanshyam/devcrm-vercel.git&quot;,
+    &quot;accountId&quot;: &quot;151f6150-c392-4315-9f31-9a8b386fc02c&quot;
+  }
+}</component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.0217033668267756" />
+      <entry key="MS500" value="2.4907088471208754" />
+      <entry key="S2" value="5.147237918721614" />
+      <entry key="S5" value="6.166701894565722" />
+      <entry key="S10" value="6.566100797805824" />
+      <entry key="S30" value="6.878344475286771" />
+      <entry key="S60" value="7.359920832911877" />
+      <entry key="M2" value="8.706958004562281" />
+      <entry key="M5" value="11.031369024490635" />
+      <entry key="M10" value="12.939918766434161" />
+      <entry key="M15" value="14.81658519197606" />
+      <entry key="M30" value="21.416797796306692" />
+      <entry key="H1" value="32.35898718437262" />
+      <entry key="H2" value="43.43552974879944" />
+      <entry key="H4" value="51.50792069840617" />
+      <entry key="D1" value="60.053175541230424" />
+      <entry key="W1" value="61.71657969858919" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="0.0" />
+      <entry key="M2" value="0.0" />
+      <entry key="M5" value="0.0" />
+      <entry key="M10" value="0.0" />
+      <entry key="M15" value="0.0" />
+      <entry key="M30" value="0.0" />
+      <entry key="H1" value="0.0" />
+      <entry key="H2" value="0.0" />
+      <entry key="H4" value="0.0" />
+      <entry key="D1" value="0.0" />
+      <entry key="W1" value="0.0" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="0.10550793120602492" />
+      <entry key="MS500" value="2.0827995996596265" />
+      <entry key="S2" value="5.017502471927233" />
+      <entry key="S5" value="6.111667532230896" />
+      <entry key="S10" value="6.538008672031329" />
+      <entry key="S30" value="6.868778011349993" />
+      <entry key="S60" value="7.354605546701531" />
+      <entry key="M2" value="8.703476114138068" />
+      <entry key="M5" value="11.029406760422292" />
+      <entry key="M10" value="12.938750457330837" />
+      <entry key="M15" value="14.815726700745843" />
+      <entry key="M30" value="21.416274450970345" />
+      <entry key="H1" value="32.35866339193812" />
+      <entry key="H2" value="43.435338928166146" />
+      <entry key="H4" value="51.5078150919759" />
+      <entry key="D1" value="60.053156172873514" />
+      <entry key="W1" value="61.71657688294799" />
+    </decayedShown>
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 2,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3GOb9T7XclY7detLR1BOhpWs268" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;E:\\devcrm_vercel\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-WS-261.26222.58" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="961bd25d-c891-46f3-b9c7-56ccea1563e1" name="Changes" comment="" />
+      <created>1783845410611</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1783845410611</updated>
+      <workItem from="1783845411915" duration="10797000" />
+    </task>
+    <task id="LOCAL-00001" summary="Merge remote-tracking branch 'origin/main'&#10;&#10;# Conflicts:&#10;#&#9;.gitignore&#10;#&#9;README.md&#10;#&#9;package-lock.json&#10;#&#9;package.json&#10;#&#9;schema.sql&#10;#&#9;server.ts&#10;#&#9;src/App.tsx&#10;#&#9;src/backup.ts&#10;#&#9;src/components/AmazonSellerView.tsx&#10;#&#9;src/components/ChallanView.tsx&#10;#&#9;src/components/CustomerView.tsx&#10;#&#9;src/components/DashboardView.tsx&#10;#&#9;src/components/InventoryView.tsx&#10;#&#9;src/components/LeadView.tsx&#10;#&#9;src/components/LoginView.tsx&#10;#&#9;src/components/ProductView.tsx&#10;#&#9;src/components/ProformaInvoiceView.tsx&#10;#&#9;src/components/QuotationsView.tsx&#10;#&#9;src/components/SettingsView.tsx&#10;#&#9;src/components/SubscriptionView.tsx&#10;#&#9;src/db.ts&#10;#&#9;src/hooks/useAuth.tsx&#10;#&#9;src/index.css&#10;#&#9;src/schemaCheck.ts&#10;#&#9;src/types.ts&#10;#&#9;src/utils.ts&#10;#&#9;table_creation_queries.sql&#10;#&#9;vite.config.ts">
+      <option name="closed" value="true" />
+      <created>1783845531563</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1783845531563</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Merge remote-tracking branch 'origin/main'">
+      <option name="closed" value="true" />
+      <created>1783845823019</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1783845823019</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Merge remote-tracking branch 'origin/main'&#10;&#10;# Conflicts:&#10;#&#9;.gitignore&#10;#&#9;README.md&#10;#&#9;package-lock.json&#10;#&#9;package.json&#10;#&#9;schema.sql&#10;#&#9;server.ts&#10;#&#9;src/App.tsx&#10;#&#9;src/backup.ts&#10;#&#9;src/components/AmazonSellerView.tsx&#10;#&#9;src/components/ChallanView.tsx&#10;#&#9;src/components/CustomerView.tsx&#10;#&#9;src/components/DashboardView.tsx&#10;#&#9;src/components/InventoryView.tsx&#10;#&#9;src/components/LeadView.tsx&#10;#&#9;src/components/LoginView.tsx&#10;#&#9;src/components/ProductView.tsx&#10;#&#9;src/components/ProformaInvoiceView.tsx&#10;#&#9;src/components/QuotationsView.tsx&#10;#&#9;src/components/SettingsView.tsx&#10;#&#9;src/components/SubscriptionView.tsx&#10;#&#9;src/db.ts&#10;#&#9;src/hooks/useAuth.tsx&#10;#&#9;src/index.css&#10;#&#9;src/schemaCheck.ts&#10;#&#9;src/types.ts&#10;#&#9;src/utils.ts&#10;#&#9;table_creation_queries.sql&#10;#&#9;vite.config.ts" />
+    <MESSAGE value="Merge remote-tracking branch 'origin/main'" />
+    <option name="LAST_COMMIT_MESSAGE" value="Merge remote-tracking branch 'origin/main'" />
+  </component>
+</project>

@@ -1,4 +1,43 @@
 import { neon } from './db';
+import {
+  SEED_COMPANY_PROFILES,
+  SEED_CUSTOMERS,
+  SEED_PRODUCTS,
+  SEED_QUOTATIONS,
+  SEED_PROFORMA_INVOICES,
+  SEED_CHALLANS,
+  SEED_LEADS,
+  SEED_SUBSCRIPTIONS,
+  SEED_REMINDERS,
+  SEED_INVENTORY
+} from './utils';
+
+export async function seedDatabaseIfEmpty() {
+  try {
+    const existing = await neon.companyProfiles.findMany();
+    if (existing.length === 0) {
+      console.log("[Seeding] Database is empty. Seeding initial records directly into PostgreSQL...");
+      const startingState = {
+        company_profiles: SEED_COMPANY_PROFILES,
+        customers: SEED_CUSTOMERS,
+        products: SEED_PRODUCTS,
+        quotations: SEED_QUOTATIONS,
+        proforma_invoices: SEED_PROFORMA_INVOICES,
+        challans: SEED_CHALLANS,
+        leads: SEED_LEADS,
+        subscriptions: SEED_SUBSCRIPTIONS,
+        reminders: SEED_REMINDERS,
+        inventory: SEED_INVENTORY
+      };
+      await saveToNeon(startingState);
+      console.log("[Seeding] Database seeding completed successfully!");
+    } else {
+      console.log("[Seeding] Database is not empty. Skipping initial seeds.");
+    }
+  } catch (err: any) {
+    console.error("[Seeding] Error checking or seeding empty database:", err.message || err);
+  }
+}
 
 function parseDate(dateStr: string | null | undefined): Date | null {
   if (!dateStr) return null;
@@ -351,8 +390,7 @@ export async function saveToNeon(payload: any) {
             purchaseFrom: inv.purchaseFrom,
             unitPrice: inv.unitPrice || 0,
             latestPurchasePrice: inv.latestPurchasePrice,
-            lastUpdated: parseDate(inv.lastUpdated) || new Date(),
-            updatedAt: new Date()
+            lastUpdated: parseDate(inv.lastUpdated) || new Date()
           },
           create: {
             id: inv.id,
@@ -364,8 +402,7 @@ export async function saveToNeon(payload: any) {
             purchaseFrom: inv.purchaseFrom,
             unitPrice: inv.unitPrice || 0,
             latestPurchasePrice: inv.latestPurchasePrice,
-            lastUpdated: parseDate(inv.lastUpdated) || new Date(),
-            updatedAt: new Date()
+            lastUpdated: parseDate(inv.lastUpdated) || new Date()
           }
         });
 

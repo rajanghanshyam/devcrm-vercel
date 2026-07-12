@@ -51,12 +51,16 @@ export async function performSchemaMigrationCheck() {
           console.log(`[Schema Check] Found ${statements.length} SQL statements in table_creation_queries.sql. Executing...`);
           
           for (let statement of statements) {
-            statement = statement.trim();
-            if (!statement || statement.startsWith('◇') || statement.startsWith('--')) {
+            const lines = statement.split('\n')
+              .map(line => line.trim())
+              .filter(line => line && !line.startsWith('--') && !line.startsWith('◇'));
+            
+            const cleanStmt = lines.join(' ').trim();
+            if (!cleanStmt) {
               continue;
             }
             try {
-              await pool.query(statement);
+              await pool.query(cleanStmt);
             } catch (stmtErr: any) {
               if (stmtErr.message && (stmtErr.message.includes('already exists') || stmtErr.message.includes('already a relation'))) {
                 continue;

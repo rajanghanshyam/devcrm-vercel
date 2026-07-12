@@ -8,7 +8,7 @@ import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { neon, pool } from "./src/db";
 import { performSchemaMigrationCheck } from "./src/schemaCheck";
-import { saveToNeon, getFromNeon } from "./src/dbHelper";
+import { saveToNeon, getFromNeon, seedDatabaseIfEmpty } from "./src/dbHelper";
 
 dotenv.config();
 
@@ -36,25 +36,8 @@ export function formatDbErrorMessage(msg: string): string {
 }
 
 export function isDbConnectionOrSchemaError(error: any): boolean {
-  if (!error) return false;
-  const msg = (error.message || String(error)).toLowerCase();
-  return (
-    msg.includes("db_not_configured") ||
-    msg.includes("db_masked") ||
-    msg.includes("relation") ||
-    msg.includes("does not exist") ||
-    msg.includes("42p01") ||
-    msg.includes("table") ||
-    msg.includes("connection failed") ||
-    msg.includes("connect") ||
-    msg.includes("is not defined") ||
-    msg.includes("password") ||
-    msg.includes("pool") ||
-    msg.includes("serverless startup seeding failed") ||
-    msg.includes("neon") ||
-    msg.includes("neon") ||
-    msg.includes("postgres")
-  );
+  // Direct connection required: Offline sandbox fallbacks and local file sync have been disabled.
+  return false;
 }
 
 // Initialize Google GenAI lazily
@@ -174,22 +157,71 @@ function getDefaultRights(role: string) {
   };
 }
 
+async function ensureInvoicesAndCustomersTablesExist() {
+  try {
+    // 1. Ensure "customers" table exists
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "customers" (
+        "id" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "company" TEXT,
+        "email" TEXT,
+        "phone" TEXT,
+        "gstin" TEXT,
+        "state" TEXT NOT NULL,
+        "billing_address" TEXT,
+        "shipping_address" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "customers_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    console.log('[Table Assertion] Checked/Created table "customers" successfully.');
+
+    // 2. Ensure "invoices" table exists
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "invoices" (
+        "id" TEXT NOT NULL,
+        "invoice_no" TEXT NOT NULL,
+        "quotation_no" TEXT,
+        "date" DATE NOT NULL,
+        "due_date" DATE,
+        "customer_id" TEXT NOT NULL,
+        "subject" TEXT,
+        "subtotal" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+        "discount_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+        "cgst_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+        "sgst_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+        "igst_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+        "grand_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+        "status" TEXT DEFAULT 'Unpaid',
+        "terms" TEXT,
+        "company_id" TEXT,
+        "terms_preset_id" TEXT,
+        "freight" DECIMAL(15,2) DEFAULT 0.00,
+        "additional_discount" DECIMAL(15,2) DEFAULT 0.00,
+        "customer_signature" TEXT,
+        "customer_signed_at" TIMESTAMP(3),
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "invoices_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    console.log('[Table Assertion] Checked/Created table "invoices" successfully.');
+  } catch (err: any) {
+    console.error('[Table Assertion] Error checking/creating tables during runtime check:', err.message || err);
+  }
+}
+
 // API to save full backup database directly to PostgreSQL
 app.post("/api/db/save", async (req, res) => {
   const payload = req.body;
   try {
     console.log("Saving massive JSON payload directly to PostgreSQL database...");
+    await ensureInvoicesAndCustomersTablesExist();
     await saveToNeon(payload);
     res.json({ success: true, message: "Database saved to PostgreSQL database successfully!" });
   } catch (error: any) {
-    if (isDbConnectionOrSchemaError(error)) {
-      console.log("[Database] Operating in sandbox offline mode (saving database bypassed).");
-      return res.json({ 
-        success: true, 
-        message: "Database save bypassed (operating in sandbox offline mode)", 
-        isFallbackMode: true 
-      });
-    }
     console.error("CRITICAL error in PostgreSQL save endpoint:", error);
     res.status(500).json({ success: false, error: formatDbErrorMessage(error.message || String(error)) });
   }
@@ -204,6 +236,7 @@ app.post("/api/save-entry", async (req, res) => {
 
   try {
     console.log(`Direct entry save requested: model=${model}, id=${data.id}`);
+    await ensureInvoicesAndCustomersTablesExist();
 
     if (model === "company_profiles") {
       await neon.termsPresets.deleteMany({ where: { companyProfileId: data.id } });
@@ -785,14 +818,8 @@ app.post("/api/save-entry", async (req, res) => {
 
     res.json({ success: true, message: `Successfully saved ${model} entry` });
   } catch (error: any) {
-    if (isDbConnectionOrSchemaError(error)) {
-      console.log(`[Database] Database is unconfigured, masked, or unmigrated. Bypassed direct save for ${model}.`);
-      res.json({ success: true, message: `Database save bypassed for ${model} (operating in sandbox offline mode)`, isFallbackMode: true });
-    } else {
-      console.error(`DIAGNOSTIC SAVE ERROR for model ${model}:`, error);
-      console.error(`Direct save failed for model ${model}:`, error);
-      res.status(500).json({ success: false, error: error.message });
-    }
+    console.error(`Direct save failed for model ${model}:`, error);
+    res.status(500).json({ success: false, error: formatDbErrorMessage(error.message || String(error)) });
   }
 });
 
@@ -835,13 +862,8 @@ app.post("/api/db/delete", async (req, res) => {
 
     res.json({ success: true, message: `Deleted ${id} from ${model}` });
   } catch (error: any) {
-    if (isDbConnectionOrSchemaError(error)) {
-      console.log(`[Database] Database is unconfigured, masked, or unmigrated. Bypassed direct delete for ${model}.`);
-      res.json({ success: true, message: `Database delete bypassed for ${model} (operating in sandbox offline mode)`, isFallbackMode: true });
-    } else {
-      console.error(`Direct delete failed for ${model}:`, error);
-      res.status(500).json({ success: false, error: error.message });
-    }
+    console.error(`Direct delete failed for ${model}:`, error);
+    res.status(500).json({ success: false, error: formatDbErrorMessage(error.message || String(error)) });
   }
 });
 
@@ -899,7 +921,7 @@ app.post("/api/db/init-schema", async (req, res) => {
       console.log("[Schema Push] Force flag specified. Dropping existing tables cascade style...");
       for (const table of expectedTables) {
         try {
-          await neon.$queryRaw`DROP TABLE IF EXISTS "${table}" CASCADE`;
+          await pool.query(`DROP TABLE IF EXISTS "${table}" CASCADE`);
           console.log(`[Schema Push] Dropped table ${table} successfully.`);
         } catch (dropErr: any) {
           console.warn(`[Schema Push] Non-blocking warning dropping table ${table}:`, dropErr.message || dropErr);
@@ -964,14 +986,6 @@ app.get("/api/db/get", async (req, res) => {
     const result = await getFromNeon();
     res.json({ success: true, data: result });
   } catch (error: any) {
-    if (isDbConnectionOrSchemaError(error)) {
-      console.log("[Database] Operating in sandbox offline mode (database retrieval falling back).");
-      return res.json({ 
-        success: false, 
-        error: formatDbErrorMessage(error.message || String(error)),
-        isFallbackMode: true 
-      });
-    }
     console.error("CRITICAL error fetching database from PostgreSQL:", error);
     res.status(500).json({ 
       success: false, 
@@ -1718,6 +1732,7 @@ async function startServer() {
   // Perform schema migration check and seeding, handling errors gracefully to prevent server crash on bad DATABASE_URL
   try {
     await performSchemaMigrationCheck();
+    await seedDatabaseIfEmpty();
     await seedDefaultUsers();
   } catch (e: any) {
     if (isDbConnectionOrSchemaError(e)) {

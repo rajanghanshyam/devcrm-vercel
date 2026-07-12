@@ -231,15 +231,225 @@ export const SEED_COMPANY_PROFILES: CompanyProfile[] = [
   }
 ];
 
-export const SEED_CUSTOMERS: Customer[] = [];
-export const SEED_PRODUCTS: Product[] = [];
-export const SEED_QUOTATIONS: Quotation[] = [];
-export const SEED_PROFORMA_INVOICES: ProformaInvoice[] = [];
-export const SEED_CHALLANS: DeliveryChallan[] = [];
-export const SEED_LEADS: Lead[] = [];
-export const SEED_SUBSCRIPTIONS: Subscription[] = [];
-export const SEED_REMINDERS: Reminder[] = [];
-export const SEED_INVENTORY: InventoryItem[] = [];
+export const SEED_CUSTOMERS: Customer[] = [
+  {
+    id: "cust_acme",
+    name: "John Doe",
+    company: "Acme Industrial Corporation",
+    email: "johndoe@acmeind.com",
+    phone: "+91 98765 43210",
+    gstin: "27AAACA1234A1Z1",
+    state: "Maharashtra",
+    billingAddress: "405-408, Pride Icon, Hadapsar, Pune, Maharashtra, 411028",
+    shippingAddress: "Plot No. 12, MIDC Industrial Area, Bhosari, Pune, Maharashtra, 411026"
+  },
+  {
+    id: "cust_delta",
+    name: "Sarah Jenkins",
+    company: "Delta Tech Solutions",
+    email: "billing@deltatech.in",
+    phone: "+91 91234 56789",
+    gstin: "29BBBCB5678B2Z2",
+    state: "Karnataka",
+    billingAddress: "8th Floor, Brigade Tech Park, Whitefield, Bangalore, Karnataka, 560066",
+    shippingAddress: "8th Floor, Brigade Tech Park, Whitefield, Bangalore, Karnataka, 560066"
+  }
+];
+
+export const SEED_PRODUCTS: Product[] = [
+  {
+    id: "prod_server",
+    name: "High Performance Cloud Server Deployment",
+    sku: "CLD-SRV-HP1",
+    rate: 15000,
+    gstRate: 18,
+    hsnCode: "997331",
+    description: "Setup and deployment of enterprise-grade cloud servers with automatic load balancing.",
+    itemType: "Product"
+  },
+  {
+    id: "prod_maintenance",
+    name: "Annual IT Support & Maintenance Contract",
+    sku: "IT-AMC-001",
+    rate: 45000,
+    gstRate: 18,
+    hsnCode: "998713",
+    description: "Annual maintenance, quarterly software updates, and 24/7 priority emergency support.",
+    itemType: "Service"
+  },
+  {
+    id: "prod_consulting",
+    name: "Custom Software Development Consulting",
+    sku: "SOFT-DEV-CON",
+    rate: 5000,
+    gstRate: 18,
+    hsnCode: "998314",
+    description: "Hourly consulting and system analysis for modern full-stack web applications.",
+    itemType: "Service"
+  }
+];
+
+export const SEED_QUOTATIONS: Quotation[] = [
+  {
+    id: "qtn_001",
+    quotationNo: "QTN-2026-27-001",
+    date: "2026-07-10",
+    validUntil: "2026-08-10",
+    customerId: "cust_acme",
+    subject: "Quotation for High Performance Cloud Server Deployment",
+    items: [
+      {
+        productId: "prod_server",
+        productName: "High Performance Cloud Server Deployment",
+        description: "Setup and deployment of enterprise-grade cloud servers with automatic load balancing.",
+        hsnCode: "997331",
+        quantity: 2,
+        rate: 15000,
+        discountPercent: 5,
+        gstPercent: 18
+      }
+    ],
+    subtotal: 30000,
+    discountTotal: 1500,
+    cgstTotal: 2565,
+    sgstTotal: 2565,
+    igstTotal: 0,
+    grandTotal: 33630,
+    status: "Pending",
+    terms: "1. Quotation is valid for 30 days.\n2. 50% Advance along with Purchase Order, 50% on Delivery.",
+    companyId: "comp_default",
+    termsPresetId: "preset_default_1"
+  }
+];
+
+export const SEED_PROFORMA_INVOICES: ProformaInvoice[] = [
+  {
+    id: "inv_001",
+    invoiceNo: "PI-2026-27-001",
+    quotationNo: "QTN-2026-27-001",
+    date: "2026-07-11",
+    dueDate: "2026-07-25",
+    customerId: "cust_acme",
+    subject: "Proforma Invoice for High Performance Cloud Server Deployment",
+    items: [
+      {
+        productId: "prod_server",
+        productName: "High Performance Cloud Server Deployment",
+        description: "Setup and deployment of enterprise-grade cloud servers with automatic load balancing.",
+        hsnCode: "997331",
+        quantity: 2,
+        rate: 15000,
+        discountPercent: 5,
+        gstPercent: 18
+      }
+    ],
+    subtotal: 30000,
+    discountTotal: 1500,
+    cgstTotal: 2565,
+    sgstTotal: 2565,
+    igstTotal: 0,
+    grandTotal: 33630,
+    status: "Unpaid",
+    terms: "1. Quotation is valid for 30 days.\n2. 50% Advance along with Purchase Order, 50% on Delivery.",
+    companyId: "comp_default",
+    termsPresetId: "preset_default_1"
+  }
+];
+
+export const SEED_CHALLANS: DeliveryChallan[] = [
+  {
+    id: "dc_001",
+    challanNo: "DC-2026-27-001",
+    date: "2026-07-12",
+    customerId: "cust_acme",
+    items: [
+      {
+        productName: "High Performance Cloud Server Deployment Router Node",
+        quantity: 2,
+        hsnCode: "84713010",
+        description: "Physical gateway router nodes shipped for server communication integration."
+      }
+    ],
+    vehicleNo: "MH-12-PQ-9999",
+    transporter: "FastTrack Logistics",
+    lrNumber: "LR-987654",
+    dispatchAddress: "123 Business Lane, Suite A, Pune",
+    status: "Dispatched",
+    notes: "Please handle router nodes with care. Fragile electronic equipment.",
+    companyId: "comp_default"
+  }
+];
+
+export const SEED_LEADS: Lead[] = [
+  {
+    id: "lead_001",
+    customerId: "cust_delta",
+    name: "Sarah Jenkins",
+    company: "Delta Tech Solutions",
+    email: "billing@deltatech.in",
+    phone: "+91 91234 56789",
+    value: 45000,
+    status: "New",
+    source: "Website Inquiry",
+    notes: "Interested in high-availability Cloud Server configurations and annual server maintenance contracts.",
+    date: "2026-07-12",
+    conversionStatus: "Warm"
+  }
+];
+
+export const SEED_SUBSCRIPTIONS: Subscription[] = [
+  {
+    id: "sub_001",
+    customerId: "cust_acme",
+    serviceName: "Managed Cloud Server SLA Subscription",
+    amount: 15000,
+    billingCycle: "Monthly",
+    startDate: "2026-07-12",
+    nextRenewalDate: "2026-08-12",
+    status: "Active",
+    description: "Comprehensive active service contract covering platform performance metrics and regular system tune-ups."
+  }
+];
+
+export const SEED_REMINDERS: Reminder[] = [
+  {
+    id: "rem_001",
+    title: "Follow up on proposal",
+    description: "Call Sarah Jenkins to discuss the Delta Tech Solutions proposal terms and SLA criteria.",
+    dueDate: "2026-07-15",
+    status: "Pending",
+    priority: "High",
+    relatedTo: "Sarah Jenkins (Delta Tech)",
+    customerId: "cust_delta"
+  }
+];
+
+export const SEED_INVENTORY: InventoryItem[] = [
+  {
+    id: "inv_item_001",
+    sku: "CLD-SRV-HP1",
+    productName: "High Performance Cloud Server Deployment Node",
+    category: "Servers",
+    quantity: 15,
+    minQuantity: 3,
+    purchaseFrom: "Tech Hardware Solutions Ltd",
+    unitPrice: 12000,
+    latestPurchasePrice: 12000,
+    lastUpdated: "2026-07-12",
+    logs: [
+      {
+        id: "log_001",
+        date: "2026-07-12",
+        type: "IN",
+        quantity: 15,
+        reason: "Initial inventory setup of high-performance router nodes",
+        prevQty: 0,
+        newQty: 15,
+        supplierName: "Tech Hardware Solutions Ltd"
+      }
+    ]
+  }
+];
 
 // Persistent state management has been completely transitioned to live Neon PostgreSQL direct connectivity.
 
