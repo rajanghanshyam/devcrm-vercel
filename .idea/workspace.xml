@@ -4,7 +4,17 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="961bd25d-c891-46f3-b9c7-56ccea1563e1" name="Changes" comment="Merge remote-tracking branch 'origin/main'" />
+    <list default="true" id="961bd25d-c891-46f3-b9c7-56ccea1563e1" name="Changes" comment="Merge remote-tracking branch 'origin/main'">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/assets/index-BfPAFHD8.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/assets/index-BooYm4E7.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/assets/index.es-YprJ5sX_.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/assets/purify.es-V6uLfjnH.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/dist/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -27,23 +37,23 @@
 }</component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.0156265741981731" />
-      <entry key="MS500" value="2.0627735335719812" />
-      <entry key="S2" value="4.280307112506954" />
-      <entry key="S5" value="5.212409735663603" />
-      <entry key="S10" value="5.587207898641793" />
-      <entry key="S30" value="5.857931809358655" />
-      <entry key="S60" value="5.928390678186545" />
-      <entry key="M2" value="5.964050273381058" />
-      <entry key="M5" value="5.985585131089076" />
-      <entry key="M10" value="5.99279098257619" />
-      <entry key="M15" value="5.99589631245735" />
-      <entry key="M30" value="6.145479721302545" />
-      <entry key="H1" value="8.68773238896765" />
-      <entry key="H2" value="18.520364789241462" />
-      <entry key="H4" value="33.654490243689565" />
-      <entry key="D1" value="60.140006341546574" />
-      <entry key="W1" value="66.80940577610824" />
+      <entry key="MS100" value="1.8236778316876485" />
+      <entry key="MS500" value="5.07182798265224" />
+      <entry key="S2" value="9.545249372945712" />
+      <entry key="S5" value="15.270344437329396" />
+      <entry key="S10" value="22.813295870233134" />
+      <entry key="S30" value="45.78711245805537" />
+      <entry key="S60" value="73.01986957313835" />
+      <entry key="M2" value="103.81689307402338" />
+      <entry key="M5" value="134.82364728439273" />
+      <entry key="M10" value="149.28705967037263" />
+      <entry key="M15" value="155.03263811469063" />
+      <entry key="M30" value="161.6012026418742" />
+      <entry key="H1" value="167.2550541035427" />
+      <entry key="H2" value="178.21315989408674" />
+      <entry key="H4" value="194.1532999393577" />
+      <entry key="D1" value="222.47149008262528" />
+      <entry key="W1" value="229.7047582736544" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -65,23 +75,23 @@
       <entry key="W1" value="0.0" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.12246664114882999" />
-      <entry key="MS500" value="1.6587566843050576" />
-      <entry key="S2" value="4.143645772347804" />
-      <entry key="S5" value="5.15331329703931" />
-      <entry key="S10" value="5.556829500336862" />
-      <entry key="S30" value="5.847611586695554" />
-      <entry key="S60" value="5.923205674203164" />
-      <entry key="M2" value="5.961451499651394" />
-      <entry key="M5" value="5.984544110110244" />
-      <entry key="M10" value="5.9922702192629425" />
-      <entry key="M15" value="5.9955490401016975" />
-      <entry key="M30" value="6.145302463753779" />
-      <entry key="H1" value="8.687618653865249" />
-      <entry key="H2" value="18.52026636601547" />
-      <entry key="H4" value="33.65441183466518" />
-      <entry key="D1" value="60.13998526213758" />
-      <entry key="W1" value="66.80940248497357" />
+      <entry key="MS100" value="1.7411872746116313" />
+      <entry key="MS500" value="5.024749072284618" />
+      <entry key="S2" value="9.523485229401215" />
+      <entry key="S5" value="15.256341103321775" />
+      <entry key="S10" value="22.801783660847047" />
+      <entry key="S30" value="45.77343953048305" />
+      <entry key="S60" value="73.00482208619171" />
+      <entry key="M2" value="103.8043199041942" />
+      <entry key="M5" value="134.816469810915" />
+      <entry key="M10" value="149.28291171925142" />
+      <entry key="M15" value="155.02970942327534" />
+      <entry key="M30" value="161.59963712876848" />
+      <entry key="H1" value="167.2542218244522" />
+      <entry key="H2" value="178.21269732774" />
+      <entry key="H4" value="194.15303753887065" />
+      <entry key="D1" value="222.47143768856023" />
+      <entry key="W1" value="229.70475048220743" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -129,7 +139,8 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1783845410611</updated>
-      <workItem from="1783845411915" duration="12423000" />
+      <workItem from="1783845411915" duration="13455000" />
+      <workItem from="1783866386759" duration="301000" />
     </task>
     <task id="LOCAL-00001" summary="Merge remote-tracking branch 'origin/main'&#10;&#10;# Conflicts:&#10;#&#9;.gitignore&#10;#&#9;README.md&#10;#&#9;package-lock.json&#10;#&#9;package.json&#10;#&#9;schema.sql&#10;#&#9;server.ts&#10;#&#9;src/App.tsx&#10;#&#9;src/backup.ts&#10;#&#9;src/components/AmazonSellerView.tsx&#10;#&#9;src/components/ChallanView.tsx&#10;#&#9;src/components/CustomerView.tsx&#10;#&#9;src/components/DashboardView.tsx&#10;#&#9;src/components/InventoryView.tsx&#10;#&#9;src/components/LeadView.tsx&#10;#&#9;src/components/LoginView.tsx&#10;#&#9;src/components/ProductView.tsx&#10;#&#9;src/components/ProformaInvoiceView.tsx&#10;#&#9;src/components/QuotationsView.tsx&#10;#&#9;src/components/SettingsView.tsx&#10;#&#9;src/components/SubscriptionView.tsx&#10;#&#9;src/db.ts&#10;#&#9;src/hooks/useAuth.tsx&#10;#&#9;src/index.css&#10;#&#9;src/schemaCheck.ts&#10;#&#9;src/types.ts&#10;#&#9;src/utils.ts&#10;#&#9;table_creation_queries.sql&#10;#&#9;vite.config.ts">
       <option name="closed" value="true" />
@@ -187,7 +198,15 @@
       <option name="project" value="LOCAL" />
       <updated>1783864738405</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="Merge remote-tracking branch 'origin/main'">
+      <option name="closed" value="true" />
+      <created>1783865247741</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1783865247741</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
