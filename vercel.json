@@ -12,6 +12,10 @@
       "dest": "dist/server.cjs"
     },
     {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "dist/server.cjs"
     }
