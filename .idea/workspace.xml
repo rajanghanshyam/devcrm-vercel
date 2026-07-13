@@ -5,13 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="961bd25d-c891-46f3-b9c7-56ccea1563e1" name="Changes" comment="Merge remote-tracking branch 'origin/main'">
+      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/db.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/db.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/schemaCheck.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/schemaCheck.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.vercel/repo.json" beforeDir="false" afterPath="$PROJECT_DIR$/.vercel/repo.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/server.cjs" beforeDir="false" afterPath="$PROJECT_DIR$/dist/server.cjs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/server.cjs.map" beforeDir="false" afterPath="$PROJECT_DIR$/dist/server.cjs.map" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -19,6 +18,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="Git.Settings">
+    <option name="PUSH_AUTO_UPDATE" value="true" />
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
@@ -35,23 +35,23 @@
 }</component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.8236778316876485" />
-      <entry key="MS500" value="5.07182798265224" />
-      <entry key="S2" value="9.545249372945712" />
-      <entry key="S5" value="15.270344437329396" />
-      <entry key="S10" value="22.813295870233134" />
-      <entry key="S30" value="45.78711245805537" />
-      <entry key="S60" value="73.01986957313835" />
-      <entry key="M2" value="103.81689307402338" />
-      <entry key="M5" value="134.82364728439273" />
-      <entry key="M10" value="149.28705967037263" />
-      <entry key="M15" value="155.03263811469063" />
-      <entry key="M30" value="161.6012026418742" />
-      <entry key="H1" value="167.2550541035427" />
-      <entry key="H2" value="178.21315989408674" />
-      <entry key="H4" value="194.1532999393577" />
-      <entry key="D1" value="222.47149008262528" />
-      <entry key="W1" value="229.7047582736544" />
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.0" />
+      <entry key="S2" value="1.000000012752832" />
+      <entry key="S5" value="1.0048855712813811" />
+      <entry key="S10" value="1.4352983756597737" />
+      <entry key="S30" value="13.786328153545954" />
+      <entry key="S60" value="40.254064873935775" />
+      <entry key="M2" value="78.39504948884529" />
+      <entry key="M5" value="123.42959448681262" />
+      <entry key="M10" value="145.7903307788825" />
+      <entry key="M15" value="154.69149842309506" />
+      <entry key="M30" value="164.7362961950507" />
+      <entry key="H1" value="172.24573881732564" />
+      <entry key="H2" value="184.14182376963058" />
+      <entry key="H4" value="200.5704174003712" />
+      <entry key="D1" value="229.3604597801268" />
+      <entry key="W1" value="236.68839110661733" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -73,23 +73,23 @@
       <entry key="W1" value="0.0" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.7411872746116313" />
-      <entry key="MS500" value="5.024749072284618" />
-      <entry key="S2" value="9.523485229401215" />
-      <entry key="S5" value="15.256341103321775" />
-      <entry key="S10" value="22.801783660847047" />
-      <entry key="S30" value="45.77343953048305" />
-      <entry key="S60" value="73.00482208619171" />
-      <entry key="M2" value="103.8043199041942" />
-      <entry key="M5" value="134.816469810915" />
-      <entry key="M10" value="149.28291171925142" />
-      <entry key="M15" value="155.02970942327534" />
-      <entry key="M30" value="161.59963712876848" />
-      <entry key="H1" value="167.2542218244522" />
-      <entry key="H2" value="178.21269732774" />
-      <entry key="H4" value="194.15303753887065" />
-      <entry key="D1" value="222.47143768856023" />
-      <entry key="W1" value="229.70475048220743" />
+      <entry key="MS100" value="0.9592641193252643" />
+      <entry key="MS500" value="0.9917167307382933" />
+      <entry key="S2" value="0.9979227317099179" />
+      <entry key="S5" value="1.004048345846106" />
+      <entry key="S10" value="1.4346254503824747" />
+      <entry key="S30" value="13.782367954333754" />
+      <entry key="S60" value="40.24607355192091" />
+      <entry key="M2" value="78.38583664673511" />
+      <entry key="M5" value="123.42318410105884" />
+      <entry key="M10" value="145.7863722991757" />
+      <entry key="M15" value="154.6886413074285" />
+      <entry key="M30" value="164.73473513357317" />
+      <entry key="H1" value="172.24490019260608" />
+      <entry key="H2" value="184.14135585077122" />
+      <entry key="H4" value="200.57015173171786" />
+      <entry key="D1" value="229.36040673793784" />
+      <entry key="W1" value="236.6883832194472" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -139,7 +139,7 @@
       <option name="presentableId" value="Default" />
       <updated>1783845410611</updated>
       <workItem from="1783845411915" duration="13455000" />
-      <workItem from="1783866386759" duration="8544000" />
+      <workItem from="1783866386759" duration="11917000" />
     </task>
     <task id="LOCAL-00001" summary="Merge remote-tracking branch 'origin/main'&#10;&#10;# Conflicts:&#10;#&#9;.gitignore&#10;#&#9;README.md&#10;#&#9;package-lock.json&#10;#&#9;package.json&#10;#&#9;schema.sql&#10;#&#9;server.ts&#10;#&#9;src/App.tsx&#10;#&#9;src/backup.ts&#10;#&#9;src/components/AmazonSellerView.tsx&#10;#&#9;src/components/ChallanView.tsx&#10;#&#9;src/components/CustomerView.tsx&#10;#&#9;src/components/DashboardView.tsx&#10;#&#9;src/components/InventoryView.tsx&#10;#&#9;src/components/LeadView.tsx&#10;#&#9;src/components/LoginView.tsx&#10;#&#9;src/components/ProductView.tsx&#10;#&#9;src/components/ProformaInvoiceView.tsx&#10;#&#9;src/components/QuotationsView.tsx&#10;#&#9;src/components/SettingsView.tsx&#10;#&#9;src/components/SubscriptionView.tsx&#10;#&#9;src/db.ts&#10;#&#9;src/hooks/useAuth.tsx&#10;#&#9;src/index.css&#10;#&#9;src/schemaCheck.ts&#10;#&#9;src/types.ts&#10;#&#9;src/utils.ts&#10;#&#9;table_creation_queries.sql&#10;#&#9;vite.config.ts">
       <option name="closed" value="true" />
@@ -221,7 +221,23 @@
       <option name="project" value="LOCAL" />
       <updated>1783869454120</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="Merge remote-tracking branch 'origin/main'">
+      <option name="closed" value="true" />
+      <created>1783876370904</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1783876370904</updated>
+    </task>
+    <task id="LOCAL-00012" summary="Merge remote-tracking branch 'origin/main'">
+      <option name="closed" value="true" />
+      <created>1783876403160</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1783876403160</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
