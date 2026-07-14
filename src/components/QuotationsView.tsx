@@ -2012,9 +2012,10 @@ export default function QuotationsView({
                 {/* Main Quotation Sheet Card */}
                 <div className="w-full rounded-xl border border-slate-300 shadow-xl p-8 sm:p-12 md:p-16 bg-white text-slate-900 flex flex-col font-sans print:border-0 print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full">
                   <table className="w-full border-collapse">
-                  <thead className="print:table-header-group">
-                    <tr>
-                      <td className="p-0 border-none font-normal text-left">
+                  <tbody>
+                    <tr className="page-break-inside-auto">
+                      <td className="p-0 border-none page-break-inside-auto">
+                        {/* Corporate Letterhead and Invoice Details (Printed once on Page 1) */}
                         {compProfile.headerImage && (
                           <div className="w-full mb-6">
                             <img 
@@ -2058,13 +2059,7 @@ export default function QuotationsView({
                              </div>
                           </div>
                         )}
-                      </td>
-                    </tr>
-                  </thead>
-                  
-                  <tbody>
-                    <tr>
-                      <td className="p-0 border-none">
+
                         {/* Client / Customer Party Info */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 text-xs leading-relaxed text-left mb-0 pb-0">
                           <div className="space-y-1">

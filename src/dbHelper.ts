@@ -1,52 +1,32 @@
-import { neon } from './db';
-import {
-  SEED_COMPANY_PROFILES,
-  SEED_CUSTOMERS,
-  SEED_PRODUCTS,
-  SEED_QUOTATIONS,
-  SEED_PROFORMA_INVOICES,
-  SEED_CHALLANS,
-  SEED_LEADS,
-  SEED_SUBSCRIPTIONS,
-  SEED_REMINDERS,
-  SEED_INVENTORY
-} from './utils';
-
-export async function seedDatabaseIfEmpty() {
-  try {
-    const existing = await neon.companyProfiles.findMany();
-    if (existing.length === 0) {
-      console.log("[Seeding] Database is empty. Seeding initial records directly into PostgreSQL...");
-      const startingState = {
-        company_profiles: SEED_COMPANY_PROFILES,
-        customers: SEED_CUSTOMERS,
-        products: SEED_PRODUCTS,
-        quotations: SEED_QUOTATIONS,
-        proforma_invoices: SEED_PROFORMA_INVOICES,
-        challans: SEED_CHALLANS,
-        leads: SEED_LEADS,
-        subscriptions: SEED_SUBSCRIPTIONS,
-        reminders: SEED_REMINDERS,
-        inventory: SEED_INVENTORY
-      };
-      await saveToNeon(startingState);
-      console.log("[Seeding] Database seeding completed successfully!");
-    } else {
-      console.log("[Seeding] Database is not empty. Skipping initial seeds.");
-    }
-  } catch (err: any) {
-    console.error("[Seeding] Error checking or seeding empty database:", err.message || err);
-  }
-}
+import { prisma } from './db';
 
 function parseDate(dateStr: string | null | undefined): Date | null {
   if (!dateStr) return null;
-  const d = new Date(dateStr);
+  const str = String(dateStr).trim();
+  if (!str) return null;
+
+  // 1. Check if DD/MM/YYYY
+  const standardMatch = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (standardMatch) {
+    const [, day, month, year] = standardMatch;
+    const d = new Date(Number(year), Number(month) - 1, Number(day));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // 2. Check if YYYY-MM-DD
+  const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    const d = new Date(Number(year), Number(month) - 1, Number(day));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  const d = new Date(str);
   return isNaN(d.getTime()) ? null : d;
 }
 
-export async function saveToNeon(payload: any) {
-  await neon.$transaction(async (tx) => {
+export async function saveToPrisma(payload: any) {
+  await prisma.$transaction(async (tx) => {
     // 1. Detect if this is a full restore or full seed
     const isFullSave = payload.company_profiles !== undefined &&
                        payload.customers !== undefined &&
@@ -390,7 +370,8 @@ export async function saveToNeon(payload: any) {
             purchaseFrom: inv.purchaseFrom,
             unitPrice: inv.unitPrice || 0,
             latestPurchasePrice: inv.latestPurchasePrice,
-            lastUpdated: parseDate(inv.lastUpdated) || new Date()
+            lastUpdated: parseDate(inv.lastUpdated) || new Date(),
+            updatedAt: new Date()
           },
           create: {
             id: inv.id,
@@ -402,7 +383,8 @@ export async function saveToNeon(payload: any) {
             purchaseFrom: inv.purchaseFrom,
             unitPrice: inv.unitPrice || 0,
             latestPurchasePrice: inv.latestPurchasePrice,
-            lastUpdated: parseDate(inv.lastUpdated) || new Date()
+            lastUpdated: parseDate(inv.lastUpdated) || new Date(),
+            updatedAt: new Date()
           }
         });
 
@@ -921,36 +903,36 @@ export async function saveToNeon(payload: any) {
   });
 }
 
-export async function getFromNeon() {
+export async function getFromPrisma() {
   const result: any = {};
   
-  result.company_profiles = await neon.companyProfiles.findMany({ include: { termsPresets: true } });
-  result.customers = await neon.customers.findMany();
-  result.products = await neon.products.findMany();
+  result.company_profiles = await prisma.companyProfiles.findMany({ include: { termsPresets: true } });
+  result.customers = await prisma.customers.findMany();
+  result.products = await prisma.products.findMany();
   
-  const rawQuotations = await neon.quotations.findMany({ include: { quotationItems: true } });
+  const rawQuotations = await prisma.quotations.findMany({ include: { quotationItems: true } });
   result.quotations = rawQuotations.map(q => ({
     ...q,
     items: q.quotationItems
   }));
   
-  const rawInvoices = await neon.invoices.findMany({ include: { invoiceItems: true } });
+  const rawInvoices = await prisma.invoices.findMany({ include: { invoiceItems: true } });
   result.proforma_invoices = rawInvoices.map(i => ({
     ...i,
     items: i.invoiceItems
   }));
   
-  const rawChallans = await neon.deliveryChallans.findMany({ include: { deliveryChallanItems: true } });
+  const rawChallans = await prisma.deliveryChallans.findMany({ include: { deliveryChallanItems: true } });
   result.challans = rawChallans.map(c => ({
     ...c,
     items: c.deliveryChallanItems
   }));
   
-  result.leads = await neon.leads.findMany();
-  result.subscriptions = await neon.subscriptions.findMany();
-  result.reminders = await neon.reminders.findMany();
+  result.leads = await prisma.leads.findMany();
+  result.subscriptions = await prisma.subscriptions.findMany();
+  result.reminders = await prisma.reminders.findMany();
   
-  const rawInventory = await neon.inventoryItems.findMany({ include: { inventoryLogs: true } });
+  const rawInventory = await prisma.inventoryItems.findMany({ include: { inventoryLogs: true } });
   result.inventory = rawInventory.map(inv => ({
     ...inv,
     logs: inv.inventoryLogs
@@ -959,7 +941,3 @@ export async function getFromNeon() {
   // Clean up format (e.g. mapping dates to string in JSON)
   return JSON.parse(JSON.stringify(result));
 }
-
-// Keep aliases for backward compatibility if needed, but we will update references
-export const saveToPrisma = saveToNeon;
-export const getFromPrisma = getFromNeon;

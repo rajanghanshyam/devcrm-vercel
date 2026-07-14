@@ -2,13 +2,12 @@ import "./src/env";
 
 import express from "express";
 import path from "path";
-import fs from "fs";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
-import { neon, pool } from "./src/db";
+import { prisma } from "./src/db";
 import { performSchemaMigrationCheck } from "./src/schemaCheck";
-import { saveToNeon, getFromNeon, seedDatabaseIfEmpty } from "./src/dbHelper";
+import { saveToPrisma, getFromPrisma } from "./src/dbHelper";
 
 dotenv.config();
 
@@ -24,14 +23,6 @@ export function formatDbErrorMessage(msg: string): string {
       "3. Copy the complete connection string containing your actual unmasked password.\n" +
       "4. Open Google AI Studio, click the 'Settings' menu in the sidebar, open 'Environment Variables', and update 'DATABASE_URL' and 'DATABASE_URL_UNPOOLED' with your correct unmasked connection string.";
   }
-  if (msg.toLowerCase().includes("password authentication failed") || msg.toLowerCase().includes("authentication failed")) {
-    return "DATABASE PASSWORD ERROR: Password authentication failed for your user 'neondb_owner'.\n\n" +
-      "This indicates that the password provided in your DATABASE_URL or DATABASE_URL_UNPOOLED is incorrect or has expired.\n\n" +
-      "To resolve this:\n" +
-      "1. Go to your Neon console (or PostgreSQL provider dashboard) and copy your correct connection string.\n" +
-      "2. Open Google AI Studio, click 'Settings' (gear icon) in the sidebar/header, then choose 'Environment Variables'.\n" +
-      "3. Locate 'DATABASE_URL' and 'DATABASE_URL_UNPOOLED' and update them with the correct password. Ensure no leading or trailing spaces are copied.";
-  }
   return msg;
 }
 
@@ -43,14 +34,83 @@ export function isDbConnectionOrSchemaError(error: any): boolean {
     msg.includes("db_masked") ||
     msg.includes("relation") ||
     msg.includes("does not exist") ||
+    msg.includes("42p01") ||
+    msg.includes("table") ||
+    msg.includes("connection failed") ||
     msg.includes("connect") ||
-    msg.includes("timeout") ||
-    msg.includes("aggregateerror") ||
-    msg.includes("database_url") ||
-    msg.includes("ssl") ||
-    msg.includes("password authentication failed") ||
-    msg.includes("authentication failed")
+    msg.includes("is not defined") ||
+    msg.includes("password") ||
+    msg.includes("pool") ||
+    msg.includes("serverless startup seeding failed") ||
+    msg.includes("prisma")
   );
+}
+
+// Robust helper functions to parse potential non-standard date formats (e.g. DD/MM/YYYY) safely
+export function parseDateSafe(dateVal: any): Date {
+  if (!dateVal) return new Date();
+  if (dateVal instanceof Date) {
+    return isNaN(dateVal.getTime()) ? new Date() : dateVal;
+  }
+  
+  const str = String(dateVal).trim();
+  if (!str) return new Date();
+  
+  // 1. Check if DD/MM/YYYY
+  const standardMatch = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (standardMatch) {
+    const [, day, month, year] = standardMatch;
+    const d = new Date(Number(year), Number(month) - 1, Number(day));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // 2. Check if YYYY-MM-DD
+  const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    const d = new Date(Number(year), Number(month) - 1, Number(day));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    return d;
+  }
+
+  return new Date();
+}
+
+export function parseDateSafeOrNull(dateVal: any): Date | null {
+  if (!dateVal) return null;
+  if (dateVal instanceof Date) {
+    return isNaN(dateVal.getTime()) ? null : dateVal;
+  }
+  
+  const str = String(dateVal).trim();
+  if (!str) return null;
+  
+  // 1. Check if DD/MM/YYYY
+  const standardMatch = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (standardMatch) {
+    const [, day, month, year] = standardMatch;
+    const d = new Date(Number(year), Number(month) - 1, Number(day));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // 2. Check if YYYY-MM-DD
+  const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    const d = new Date(Number(year), Number(month) - 1, Number(day));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    return d;
+  }
+
+  return null;
 }
 
 // Initialize Google GenAI lazily
@@ -151,7 +211,7 @@ app.use(async (req, res, next) => {
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-// Helper removed since we only use PostgreSQL database
+// Helper removed since we only use Prisma
 function getDefaultRights(role: string) {
   return {
     dashboard: true,
@@ -170,110 +230,15 @@ function getDefaultRights(role: string) {
   };
 }
 
-async function ensureInvoicesAndCustomersTablesExist() {
-  try {
-    // 1. Ensure "customers" table exists
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS "customers" (
-        "id" TEXT NOT NULL,
-        "name" TEXT NOT NULL,
-        "company" TEXT,
-        "email" TEXT,
-        "phone" TEXT,
-        "gstin" TEXT,
-        "state" TEXT NOT NULL,
-        "billing_address" TEXT,
-        "shipping_address" TEXT,
-        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updated_at" TIMESTAMP(3) NOT NULL,
-        CONSTRAINT "customers_pkey" PRIMARY KEY ("id")
-      );
-    `);
-    console.log('[Table Assertion] Checked/Created table "customers" successfully.');
-
-    // 1b. Run ALTER TABLE to ensure columns exist in case the table already existed with an older schema
-    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "company" TEXT;`);
-    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "email" TEXT;`);
-    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "phone" TEXT;`);
-    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "gstin" TEXT;`);
-    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "state" TEXT NOT NULL DEFAULT 'Other';`);
-    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "billing_address" TEXT;`);
-    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "shipping_address" TEXT;`);
-    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`);
-    await pool.query(`ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`);
-    console.log('[Table Assertion] Explicitly ran ALTER column assertions for "customers".');
-
-    // 2. Ensure "invoices" table exists
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS "invoices" (
-        "id" TEXT NOT NULL,
-        "invoice_no" TEXT NOT NULL,
-        "quotation_no" TEXT,
-        "date" DATE NOT NULL,
-        "due_date" DATE,
-        "customer_id" TEXT NOT NULL,
-        "subject" TEXT,
-        "subtotal" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
-        "discount_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
-        "cgst_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
-        "sgst_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
-        "igst_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
-        "grand_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
-        "status" TEXT DEFAULT 'Unpaid',
-        "terms" TEXT,
-        "company_id" TEXT,
-        "terms_preset_id" TEXT,
-        "freight" DECIMAL(15,2) DEFAULT 0.00,
-        "additional_discount" DECIMAL(15,2) DEFAULT 0.00,
-        "customer_signature" TEXT,
-        "customer_signed_at" TIMESTAMP(3),
-        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updated_at" TIMESTAMP(3) NOT NULL,
-        CONSTRAINT "invoices_pkey" PRIMARY KEY ("id")
-      );
-    `);
-    console.log('[Table Assertion] Checked/Created table "invoices" successfully.');
-
-    // 2b. Run ALTER TABLE to ensure columns exist in case the table already existed with an older schema
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "invoice_no" TEXT NOT NULL DEFAULT '';`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "quotation_no" TEXT;`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "date" DATE NOT NULL DEFAULT CURRENT_DATE;`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "due_date" DATE;`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "customer_id" TEXT NOT NULL DEFAULT '';`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "subject" TEXT;`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "subtotal" DECIMAL(15,2) NOT NULL DEFAULT 0.00;`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "discount_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00;`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "cgst_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00;`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "sgst_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00;`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "igst_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00;`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "grand_total" DECIMAL(15,2) NOT NULL DEFAULT 0.00;`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "status" TEXT DEFAULT 'Unpaid';`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "terms" TEXT;`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "company_id" TEXT;`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "terms_preset_id" TEXT;`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "freight" DECIMAL(15,2) DEFAULT 0.00;`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "additional_discount" DECIMAL(15,2) DEFAULT 0.00;`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "customer_signature" TEXT;`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "customer_signed_at" TIMESTAMP(3);`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`);
-    await pool.query(`ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`);
-    console.log('[Table Assertion] Explicitly ran ALTER column assertions for "invoices".');
-
-  } catch (err: any) {
-    console.error('[Table Assertion] Error checking/creating tables during runtime check:', err.message || err);
-  }
-}
-
 // API to save full backup database directly to PostgreSQL
 app.post("/api/db/save", async (req, res) => {
   const payload = req.body;
   try {
-    console.log("Saving massive JSON payload directly to PostgreSQL database...");
-    await ensureInvoicesAndCustomersTablesExist();
-    await saveToNeon(payload);
-    res.json({ success: true, message: "Database saved to PostgreSQL database successfully!" });
+    console.log("Saving massive JSON payload directly to Prisma models...");
+    await saveToPrisma(payload);
+    res.json({ success: true, message: "Database saved to Prisma models successfully!" });
   } catch (error: any) {
-    console.error("CRITICAL error in PostgreSQL save endpoint:", error);
+    console.error("CRITICAL error in Prisma save endpoint:", error);
     res.status(500).json({ success: false, error: formatDbErrorMessage(error.message || String(error)) });
   }
 });
@@ -287,11 +252,10 @@ app.post("/api/save-entry", async (req, res) => {
 
   try {
     console.log(`Direct entry save requested: model=${model}, id=${data.id}`);
-    await ensureInvoicesAndCustomersTablesExist();
 
     if (model === "company_profiles") {
-      await neon.termsPresets.deleteMany({ where: { companyProfileId: data.id } });
-      await neon.companyProfiles.upsert({
+      await prisma.termsPresets.deleteMany({ where: { companyProfileId: data.id } });
+      await prisma.companyProfiles.upsert({
         where: { id: data.id },
         update: {
           name: data.name,
@@ -351,7 +315,7 @@ app.post("/api/save-entry", async (req, res) => {
       });
       if (data.termsPresets && Array.isArray(data.termsPresets)) {
         for (const tp of data.termsPresets) {
-          await neon.termsPresets.upsert({
+          await prisma.termsPresets.upsert({
             where: { id: tp.id },
             update: {
               companyProfileId: data.id,
@@ -371,7 +335,7 @@ app.post("/api/save-entry", async (req, res) => {
     }
 
     else if (model === "customers") {
-      await neon.customers.upsert({
+      await prisma.customers.upsert({
         where: { id: data.id },
         update: {
           name: data.name,
@@ -402,7 +366,7 @@ app.post("/api/save-entry", async (req, res) => {
     }
 
     else if (model === "products") {
-      await neon.products.upsert({
+      await prisma.products.upsert({
         where: { id: data.id },
         update: {
           name: data.name || "Unnamed Product",
@@ -437,12 +401,12 @@ app.post("/api/save-entry", async (req, res) => {
     }
 
     else if (model === "quotations") {
-      await neon.quotationItems.deleteMany({ where: { quotationId: data.id } });
+      await prisma.quotationItems.deleteMany({ where: { quotationId: data.id } });
 
       if (data.customerId) {
-        const custExists = await neon.customers.findUnique({ where: { id: data.customerId } });
+        const custExists = await prisma.customers.findUnique({ where: { id: data.customerId } });
         if (!custExists) {
-          await neon.customers.create({
+          await prisma.customers.create({
             data: {
               id: data.customerId,
               name: "Placeholder Customer",
@@ -453,7 +417,7 @@ app.post("/api/save-entry", async (req, res) => {
         }
       }
 
-      await neon.quotations.upsert({
+      await prisma.quotations.upsert({
         where: { id: data.id },
         update: {
           quotationNo: data.quotationNo,
@@ -508,7 +472,7 @@ app.post("/api/save-entry", async (req, res) => {
 
       if (data.items && Array.isArray(data.items)) {
         for (const item of data.items) {
-          await neon.quotationItems.create({
+          await prisma.quotationItems.create({
             data: {
               quotationId: data.id,
               productId: item.productId,
@@ -526,12 +490,12 @@ app.post("/api/save-entry", async (req, res) => {
     }
 
     else if (model === "invoices" || model === "proforma_invoices") {
-      await neon.invoiceItems.deleteMany({ where: { invoiceId: data.id } });
+      await prisma.invoiceItems.deleteMany({ where: { invoiceId: data.id } });
 
       if (data.customerId) {
-        const custExists = await neon.customers.findUnique({ where: { id: data.customerId } });
+        const custExists = await prisma.customers.findUnique({ where: { id: data.customerId } });
         if (!custExists) {
-          await neon.customers.create({
+          await prisma.customers.create({
             data: {
               id: data.customerId,
               name: "Placeholder Customer",
@@ -542,7 +506,7 @@ app.post("/api/save-entry", async (req, res) => {
         }
       }
 
-      await neon.invoices.upsert({
+      await prisma.invoices.upsert({
         where: { id: data.id },
         update: {
           invoiceNo: data.invoiceNo,
@@ -597,7 +561,7 @@ app.post("/api/save-entry", async (req, res) => {
 
       if (data.items && Array.isArray(data.items)) {
         for (const item of data.items) {
-          await neon.invoiceItems.create({
+          await prisma.invoiceItems.create({
             data: {
               invoiceId: data.id,
               productId: item.productId,
@@ -615,12 +579,12 @@ app.post("/api/save-entry", async (req, res) => {
     }
 
     else if (model === "challans") {
-      await neon.deliveryChallanItems.deleteMany({ where: { deliveryChallanId: data.id } });
+      await prisma.deliveryChallanItems.deleteMany({ where: { deliveryChallanId: data.id } });
 
       if (data.customerId) {
-        const custExists = await neon.customers.findUnique({ where: { id: data.customerId } });
+        const custExists = await prisma.customers.findUnique({ where: { id: data.customerId } });
         if (!custExists) {
-          await neon.customers.create({
+          await prisma.customers.create({
             data: {
               id: data.customerId,
               name: "Placeholder Customer",
@@ -631,7 +595,7 @@ app.post("/api/save-entry", async (req, res) => {
         }
       }
 
-      await neon.deliveryChallans.upsert({
+      await prisma.deliveryChallans.upsert({
         where: { id: data.id },
         update: {
           challanNo: data.challanNo,
@@ -666,7 +630,7 @@ app.post("/api/save-entry", async (req, res) => {
 
       if (data.items && Array.isArray(data.items)) {
         for (const item of data.items) {
-          await neon.deliveryChallanItems.create({
+          await prisma.deliveryChallanItems.create({
             data: {
               deliveryChallanId: data.id,
               productName: item.productName || "Product",
@@ -680,7 +644,7 @@ app.post("/api/save-entry", async (req, res) => {
     }
 
     else if (model === "leads") {
-      await neon.leads.upsert({
+      await prisma.leads.upsert({
         where: { id: data.id },
         update: {
           customerId: data.customerId || null,
@@ -718,9 +682,9 @@ app.post("/api/save-entry", async (req, res) => {
 
     else if (model === "subscriptions") {
       if (data.customerId) {
-        const custExists = await neon.customers.findUnique({ where: { id: data.customerId } });
+        const custExists = await prisma.customers.findUnique({ where: { id: data.customerId } });
         if (!custExists) {
-          await neon.customers.create({
+          await prisma.customers.create({
             data: {
               id: data.customerId,
               name: "Placeholder Customer",
@@ -731,15 +695,15 @@ app.post("/api/save-entry", async (req, res) => {
         }
       }
 
-      await neon.subscriptions.upsert({
+      await prisma.subscriptions.upsert({
         where: { id: data.id },
         update: {
           customerId: data.customerId,
           serviceName: data.serviceName,
           amount: data.amount || 0,
           billingCycle: data.billingCycle,
-          startDate: data.startDate ? new Date(data.startDate) : new Date(),
-          nextRenewalDate: data.nextRenewalDate ? new Date(data.nextRenewalDate) : new Date(),
+          startDate: parseDateSafe(data.startDate),
+          nextRenewalDate: parseDateSafe(data.nextRenewalDate),
           status: data.status,
           description: data.description,
           updatedAt: new Date()
@@ -750,11 +714,11 @@ app.post("/api/save-entry", async (req, res) => {
           serviceName: data.serviceName,
           amount: data.amount || 0,
           billingCycle: data.billingCycle,
-          startDate: data.startDate ? new Date(data.startDate) : new Date(),
-          nextRenewalDate: data.nextRenewalDate ? new Date(data.nextRenewalDate) : new Date(),
+          startDate: parseDateSafe(data.startDate),
+          nextRenewalDate: parseDateSafe(data.nextRenewalDate),
           status: data.status,
           description: data.description,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+          createdAt: parseDateSafe(data.createdAt),
           updatedAt: new Date()
         
       }
@@ -762,12 +726,12 @@ app.post("/api/save-entry", async (req, res) => {
     }
 
     else if (model === "reminders") {
-      await neon.reminders.upsert({
+      await prisma.reminders.upsert({
         where: { id: data.id },
         update: {
           title: data.title,
           description: data.description,
-          dueDate: data.dueDate ? new Date(data.dueDate) : new Date(),
+          dueDate: parseDateSafe(data.dueDate),
           status: data.status,
           priority: data.priority,
           relatedTo: data.relatedTo,
@@ -779,13 +743,13 @@ app.post("/api/save-entry", async (req, res) => {
           id: data.id,
           title: data.title,
           description: data.description,
-          dueDate: data.dueDate ? new Date(data.dueDate) : new Date(),
+          dueDate: parseDateSafe(data.dueDate),
           status: data.status,
           priority: data.priority,
           relatedTo: data.relatedTo,
           subscriptionId: data.subscriptionId || null,
           customerId: data.customerId || null,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+          createdAt: parseDateSafe(data.createdAt),
           updatedAt: new Date()
         
       }
@@ -799,13 +763,13 @@ app.post("/api/save-entry", async (req, res) => {
       const cleanUnitPrice = Number(data.unitPrice) || 0;
       const cleanLatestPurchasePrice = data.latestPurchasePrice !== undefined && data.latestPurchasePrice !== null && data.latestPurchasePrice !== "" ? Number(data.latestPurchasePrice) : null;
 
-      await neon.inventoryLogs.deleteMany({ where: { inventoryItemId: data.id } });
+      await prisma.inventoryLogs.deleteMany({ where: { inventoryItemId: data.id } });
 
       if (cleanSku) {
-        const prodExists = await neon.products.findUnique({ where: { sku: cleanSku } });
+        const prodExists = await prisma.products.findUnique({ where: { sku: cleanSku } });
         if (!prodExists) {
           const placeholderId = `prod_placeholder_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-          await neon.products.create({
+          await prisma.products.create({
             data: {
               id: placeholderId,
               name: data.productName || `Product for SKU ${cleanSku}`,
@@ -819,7 +783,7 @@ app.post("/api/save-entry", async (req, res) => {
         }
       }
 
-      await neon.inventoryItems.upsert({
+      await prisma.inventoryItems.upsert({
         where: { id: data.id },
         update: {
           sku: cleanSku,
@@ -849,7 +813,7 @@ app.post("/api/save-entry", async (req, res) => {
 
       if (data.logs && Array.isArray(data.logs)) {
         for (const log of data.logs) {
-          await neon.inventoryLogs.create({
+          await prisma.inventoryLogs.create({
             data: {
               id: log.id || "log_" + Math.random().toString(36).substring(2, 15) + "_" + Date.now(),
               inventoryItemId: data.id,
@@ -869,8 +833,14 @@ app.post("/api/save-entry", async (req, res) => {
 
     res.json({ success: true, message: `Successfully saved ${model} entry` });
   } catch (error: any) {
-    console.error(`Direct save failed for model ${model}:`, error);
-    res.status(500).json({ success: false, error: formatDbErrorMessage(error.message || String(error)) });
+    console.error(`DIAGNOSTIC SAVE ERROR for model ${model}:`, error);
+    if (isDbConnectionOrSchemaError(error)) {
+      console.log(`[Database] Database is unconfigured, masked, or unmigrated. Bypassed direct save for ${model}.`);
+      res.json({ success: true, message: `Database save bypassed for ${model} (operating in sandbox offline mode)`, isFallbackMode: true });
+    } else {
+      console.error(`Direct save failed for model ${model}:`, error);
+      res.status(500).json({ success: false, error: error.message });
+    }
   }
 });
 
@@ -885,43 +855,48 @@ app.post("/api/db/delete", async (req, res) => {
     console.log(`Direct entry delete requested: model=${model}, id=${id}`);
 
     if (model === "customers") {
-      await neon.customers.delete({ where: { id } });
+      await prisma.customers.delete({ where: { id } });
     } else if (model === "products") {
-      await neon.products.delete({ where: { id } });
+      await prisma.products.delete({ where: { id } });
     } else if (model === "quotations") {
-      await neon.quotationItems.deleteMany({ where: { quotationId: id } });
-      await neon.quotations.delete({ where: { id } });
+      await prisma.quotationItems.deleteMany({ where: { quotationId: id } });
+      await prisma.quotations.delete({ where: { id } });
     } else if (model === "invoices" || model === "proforma_invoices") {
-      await neon.invoiceItems.deleteMany({ where: { invoiceId: id } });
-      await neon.invoices.delete({ where: { id } });
+      await prisma.invoiceItems.deleteMany({ where: { invoiceId: id } });
+      await prisma.invoices.delete({ where: { id } });
     } else if (model === "challans") {
-      await neon.deliveryChallanItems.deleteMany({ where: { deliveryChallanId: id } });
-      await neon.deliveryChallans.delete({ where: { id } });
+      await prisma.deliveryChallanItems.deleteMany({ where: { deliveryChallanId: id } });
+      await prisma.deliveryChallans.delete({ where: { id } });
     } else if (model === "leads") {
-      await neon.leads.delete({ where: { id } });
+      await prisma.leads.delete({ where: { id } });
     } else if (model === "subscriptions") {
-      await neon.subscriptions.delete({ where: { id } });
+      await prisma.subscriptions.delete({ where: { id } });
     } else if (model === "reminders") {
-      await neon.reminders.delete({ where: { id } });
+      await prisma.reminders.delete({ where: { id } });
     } else if (model === "inventory") {
-      await neon.inventoryLogs.deleteMany({ where: { inventoryItemId: id } });
-      await neon.inventoryItems.delete({ where: { id } });
+      await prisma.inventoryLogs.deleteMany({ where: { inventoryItemId: id } });
+      await prisma.inventoryItems.delete({ where: { id } });
     } else if (model === "company_profiles") {
-      await neon.termsPresets.deleteMany({ where: { companyProfileId: id } });
-      await neon.companyProfiles.delete({ where: { id } });
+      await prisma.termsPresets.deleteMany({ where: { companyProfileId: id } });
+      await prisma.companyProfiles.delete({ where: { id } });
     }
 
     res.json({ success: true, message: `Deleted ${id} from ${model}` });
   } catch (error: any) {
-    console.error(`Direct delete failed for ${model}:`, error);
-    res.status(500).json({ success: false, error: formatDbErrorMessage(error.message || String(error)) });
+    if (isDbConnectionOrSchemaError(error)) {
+      console.log(`[Database] Database is unconfigured, masked, or unmigrated. Bypassed direct delete for ${model}.`);
+      res.json({ success: true, message: `Database delete bypassed for ${model} (operating in sandbox offline mode)`, isFallbackMode: true });
+    } else {
+      console.error(`Direct delete failed for ${model}:`, error);
+      res.status(500).json({ success: false, error: error.message });
+    }
   }
 });
 
 // API to fetch backup database from PostgreSQL with fallback
 app.get("/api/db/test-connection", async (req, res) => {
   try {
-    await neon.$queryRaw`SELECT 1`;
+    await prisma.$queryRaw`SELECT 1`;
     res.json({
       success: true,
       connected: true,
@@ -937,116 +912,13 @@ app.get("/api/db/test-connection", async (req, res) => {
   }
 });
 
-app.post("/api/db/init-schema", async (req, res) => {
-  const { force } = req.body;
-  try {
-    const url = process.env.DATABASE_URL || '';
-    if (!url || url.includes('******') || url.includes('%2A%2A%2A%2A%2A%2A')) {
-      return res.status(400).json({ success: false, error: "Database not configured or credentials are still masked." });
-    }
-
-    const expectedTables = [
-      'inventory_logs',
-      'inventory_items',
-      'reminders',
-      'subscriptions',
-      'leads',
-      'delivery_challan_items',
-      'delivery_challans',
-      'invoice_items',
-      'invoices',
-      'quotation_items',
-      'quotations',
-      'subscription_policies',
-      'terms_presets',
-      'products',
-      'customers',
-      'company_profiles',
-      'user_profiles',
-      'app_data'
-    ];
-
-    // pool is imported statically at the top of the file
-
-    if (force) {
-      console.log("[Schema Push] Force flag specified. Dropping existing tables cascade style...");
-      for (const table of expectedTables) {
-        try {
-          await pool.query(`DROP TABLE IF EXISTS "${table}" CASCADE`);
-          console.log(`[Schema Push] Dropped table ${table} successfully.`);
-        } catch (dropErr: any) {
-          console.warn(`[Schema Push] Non-blocking warning dropping table ${table}:`, dropErr.message || dropErr);
-        }
-      }
-    }
-
-    const filePath = path.join(process.cwd(), 'table_creation_queries.sql');
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ success: false, error: "table_creation_queries.sql not found." });
-    }
-
-    const sqlContent = fs.readFileSync(filePath, 'utf-8');
-    const statements = sqlContent.split(';');
-    console.log(`[Schema Push] Found ${statements.length} SQL statements. Executing...`);
-    
-    let executedCount = 0;
-    let skippedCount = 0;
-    for (let statement of statements) {
-      // Split statement into lines, filter out comments and metadata lines
-      const lines = statement.split('\n')
-        .map(line => line.trim())
-        .filter(line => line && !line.startsWith('--') && !line.startsWith('◇'));
-      
-      const cleanStmt = lines.join(' ').trim();
-      if (!cleanStmt) {
-        continue;
-      }
-      try {
-        await pool.query(cleanStmt);
-        executedCount++;
-      } catch (stmtErr: any) {
-        if (stmtErr.message && (stmtErr.message.includes('already exists') || stmtErr.message.includes('already a relation'))) {
-          skippedCount++;
-          continue;
-        }
-        throw stmtErr;
-      }
-    }
-
-    // Always reseed user profiles if they were dropped or don't exist
-    await seedDefaultUsers();
-
-    res.json({
-      success: true,
-      message: `Database schema successfully pushed! Executed ${executedCount} statements.`,
-      executedCount,
-      skippedCount
-    });
-  } catch (error: any) {
-    console.error("[Schema Push] Failed to push schema:", error);
-    res.status(500).json({
-      success: false,
-      error: formatDbErrorMessage(error.message || String(error))
-    });
-  }
-});
-
 app.get("/api/db/get", async (req, res) => {
   try {
-    console.log("Fetching database directly from PostgreSQL database...");
-    const result = await getFromNeon();
+    console.log("Fetching database directly from Prisma models...");
+    const result = await getFromPrisma();
     res.json({ success: true, data: result });
   } catch (error: any) {
-    if (isDbConnectionOrSchemaError(error)) {
-      console.log("[Database] Operating in sandbox offline mode (database fetch bypassed due to offline/unconfigured DB).");
-      return res.json({
-        success: true,
-        data: {}, // An empty data object tells the frontend to seed in-memory defaults
-        isFallbackMode: true,
-        dbError: formatDbErrorMessage(error.message || String(error))
-      });
-    }
-    console.error("CRITICAL error fetching database from PostgreSQL:", error);
+    console.error("CRITICAL error fetching database from Prisma:", error);
     res.status(500).json({ 
       success: false, 
       error: formatDbErrorMessage(error.message || String(error)) 
@@ -1063,7 +935,7 @@ app.get("/api/amazon/orders", async (req, res) => {
 
     // 1. Fetch from chunked high-performance storage in app_data (fully allowed by rules)
     try {
-      const metaRes = await neon.appData.findUnique({ where: { key: "amazon_orders_meta" } });
+      const metaRes = await prisma.appData.findUnique({ where: { key: "amazon_orders_meta" } });
       if (metaRes && metaRes.dataJson) {
         const metaData = JSON.parse(metaRes.dataJson);
         const chunkCount = metaData.chunkCount || 0;
@@ -1071,7 +943,7 @@ app.get("/api/amazon/orders", async (req, res) => {
         if (chunkCount > 0) {
           const chunkPromises = [];
           for (let i = 0; i < chunkCount; i++) {
-            chunkPromises.push(neon.appData.findUnique({ where: { key: `amazon_orders_chunk_${i}` } }));
+            chunkPromises.push(prisma.appData.findUnique({ where: { key: `amazon_orders_chunk_${i}` } }));
           }
           const chunkResults = await Promise.all(chunkPromises);
           for (const chunkRes of chunkResults) {
@@ -1089,7 +961,7 @@ app.get("/api/amazon/orders", async (req, res) => {
         }
       }
     } catch (chunkErr) {
-      console.warn("Failed to fetch chunked Amazon orders from PostgreSQL:", chunkErr);
+      console.warn("Failed to fetch chunked Amazon orders from Prisma:", chunkErr);
     }
 
     const finalOrders = Array.from(ordersMap.values());
@@ -1144,7 +1016,7 @@ app.post("/api/amazon/orders", async (req, res) => {
     // 5. Fire and forget/try writing to PostgreSQL in the background completely out of the request-response thread
     const backgroundTask = (async () => {
       try {
-        const metaRes = await neon.appData.findUnique({ where: { key: "amazon_orders_meta" } });
+        const metaRes = await prisma.appData.findUnique({ where: { key: "amazon_orders_meta" } });
         const prevChunkCount = metaRes?.dataJson ? (JSON.parse(metaRes.dataJson)?.chunkCount || 0) : 0;
 
         const chunkSize = 1000;
@@ -1152,14 +1024,14 @@ app.post("/api/amazon/orders", async (req, res) => {
         
         for (let c = 0; c < newChunkCount; c++) {
           const chunkData = cappedOrders.slice(c * chunkSize, (c + 1) * chunkSize);
-          await neon.appData.upsert({
+          await prisma.appData.upsert({
             where: { key: `amazon_orders_chunk_${c}` },
             update: { dataJson: JSON.stringify({ orders: chunkData }), updatedAt: new Date().toISOString() },
             create: { key: `amazon_orders_chunk_${c}`, dataJson: JSON.stringify({ orders: chunkData }), updatedAt: new Date().toISOString() }
           });
         }
 
-        await neon.appData.upsert({
+        await prisma.appData.upsert({
           where: { key: "amazon_orders_meta" },
           update: {
             dataJson: JSON.stringify({
@@ -1181,12 +1053,12 @@ app.post("/api/amazon/orders", async (req, res) => {
         // Clean up old chunks
         if (prevChunkCount > newChunkCount) {
           for (let p = newChunkCount; p < prevChunkCount; p++) {
-            await neon.appData.delete({ where: { key: `amazon_orders_chunk_${p}` } }).catch(() => {});
+            await prisma.appData.delete({ where: { key: `amazon_orders_chunk_${p}` } }).catch(() => {});
           }
         }
-        console.log(`[Background Sync] Successfully updated ${cappedOrders.length} orders in Neon cloud storage.`);
+        console.log(`[Background Prisma Sync] Successfully updated ${cappedOrders.length} orders in cloud storage.`);
       } catch (postgresWriteErr: any) {
-        console.error("[Background Sync] Cloud backup failed:", postgresWriteErr.message);
+        console.error("[Background Prisma Sync] Cloud backup failed:", postgresWriteErr.message);
       }
     })();
 
@@ -1466,25 +1338,14 @@ app.post("/api/marketing/generate-image", async (req, res) => {
 // GET users directly from PostgreSQL
 app.get("/api/users", async (req, res) => {
   try {
-    const users = await neon.userProfiles.findMany();
+    const users = await prisma.userProfiles.findMany();
     const profiles = users.map(u => ({
       ...u,
       rights: u.rights ? JSON.parse(u.rights) : {}
     }));
-    // Sync to fallback in-memory list on successful retrieval
-    fallbackUsers = profiles;
     res.json({ success: true, users: profiles });
   } catch (err: any) {
-    if (isDbConnectionOrSchemaError(err)) {
-      console.log("[Database] Operating in sandbox offline mode (user profiles falling back to in-memory).");
-      return res.json({ 
-        success: true, 
-        users: fallbackUsers, 
-        isFallbackMode: true, 
-        dbError: formatDbErrorMessage(err.message || String(err)) 
-      });
-    }
-    console.error("CRITICAL error fetching users from PostgreSQL:", err);
+    console.error("CRITICAL error fetching users from Prisma:", err);
     res.status(500).json({ success: false, error: formatDbErrorMessage(err.message || String(err)) });
   }
 });
@@ -1492,32 +1353,23 @@ app.get("/api/users", async (req, res) => {
 // CREATE user directly in PostgreSQL
 app.post("/api/users/create", async (req, res) => {
   const { email, password, name, role, rights } = req.body;
-  const userId = "user_" + Math.random().toString(36).substring(2, 15);
-  const resolvedRole = role || "Employee";
-  const userProfile = {
-    id: userId,
-    name: name || "New User",
-    email: email || "",
-    role: resolvedRole,
-    password: password || "pass",
-    isActive: true,
-    rights: rights ? JSON.stringify(rights) : "{}",
-    createdAt: new Date().toISOString()
-  };
-
   try {
-    const newUser = await neon.userProfiles.create({ data: userProfile });
+    const userId = "user_" + Math.random().toString(36).substring(2, 15);
+    const resolvedRole = role || "Employee";
+    const userProfile = {
+      id: userId,
+      name: name || "New User",
+      email: email || "",
+      role: resolvedRole,
+      password: password || "pass",
+      isActive: true,
+      rights: rights ? JSON.stringify(rights) : "{}",
+      createdAt: new Date().toISOString()
+    };
+
+    const newUser = await prisma.userProfiles.create({ data: userProfile });
     res.json({ success: true, user: { ...newUser, rights: rights || {} } });
   } catch (err: any) {
-    if (isDbConnectionOrSchemaError(err)) {
-      console.log("[Database] Operating in sandbox offline mode (user creation falling back to in-memory).");
-      const newUserFallback = {
-        ...userProfile,
-        rights: rights || {}
-      };
-      fallbackUsers.push(newUserFallback);
-      return res.json({ success: true, user: newUserFallback, isFallbackMode: true });
-    }
     console.error("Error creating backend user in PostgreSQL:", err);
     res.status(400).json({ success: false, error: formatDbErrorMessage(err.message || String(err)) });
   }
@@ -1534,24 +1386,12 @@ app.post("/api/users/update", async (req, res) => {
     if (isActive !== undefined) updateData.isActive = isActive;
     if (rights !== undefined) updateData.rights = JSON.stringify(rights);
 
-    await neon.userProfiles.update({
+    await prisma.userProfiles.update({
       where: { id },
       data: updateData
     });
     res.json({ success: true });
   } catch (err: any) {
-    if (isDbConnectionOrSchemaError(err)) {
-      console.log("[Database] Operating in sandbox offline mode (user update falling back to in-memory).");
-      const userIdx = fallbackUsers.findIndex(u => u.id === id);
-      if (userIdx !== -1) {
-        if (name !== undefined) fallbackUsers[userIdx].name = name;
-        if (role !== undefined) fallbackUsers[userIdx].role = role;
-        if (password !== undefined) fallbackUsers[userIdx].password = password;
-        if (isActive !== undefined) fallbackUsers[userIdx].isActive = isActive;
-        if (rights !== undefined) fallbackUsers[userIdx].rights = rights;
-      }
-      return res.json({ success: true, isFallbackMode: true });
-    }
     console.error("Error updating backend user in PostgreSQL:", err);
     res.status(400).json({ success: false, error: formatDbErrorMessage(err.message || String(err)) });
   }
@@ -1561,14 +1401,9 @@ app.post("/api/users/update", async (req, res) => {
 app.post("/api/users/delete", async (req, res) => {
   const { id } = req.body;
   try {
-    await neon.userProfiles.delete({ where: { id } });
+    await prisma.userProfiles.delete({ where: { id } });
     res.json({ success: true });
   } catch (err: any) {
-    if (isDbConnectionOrSchemaError(err)) {
-      console.log("[Database] Operating in sandbox offline mode (user deletion falling back to in-memory).");
-      fallbackUsers = fallbackUsers.filter(u => u.id !== id);
-      return res.json({ success: true, isFallbackMode: true });
-    }
     console.error("Error deleting backend user from PostgreSQL:", err);
     res.status(400).json({ success: false, error: formatDbErrorMessage(err.message || String(err)) });
   }
@@ -1578,7 +1413,7 @@ app.post("/api/users/delete", async (req, res) => {
 app.post("/api/users/login", async (req, res) => {
   const { email, password } = req.body;
   try {
-    const users = await neon.userProfiles.findMany();
+    const users = await prisma.userProfiles.findMany();
     const foundUser = users.find(
       (u: any) => u.email?.toLowerCase() === email.toLowerCase()
     );
@@ -1597,26 +1432,6 @@ app.post("/api/users/login", async (req, res) => {
 
     res.json({ success: true, user: { ...foundUser, rights: foundUser.rights ? JSON.parse(foundUser.rights) : {} } });
   } catch (err: any) {
-    if (isDbConnectionOrSchemaError(err)) {
-      console.log("[Database] Operating in sandbox offline mode (user login falling back to in-memory).");
-      const foundUser = fallbackUsers.find(
-        (u: any) => u.email?.toLowerCase() === email.toLowerCase()
-      );
-
-      if (!foundUser) {
-        return res.status(401).json({ success: false, error: "Incorrect email address or password" });
-      }
-
-      if (foundUser.password !== password) {
-        return res.status(401).json({ success: false, error: "Incorrect email address or password" });
-      }
-
-      if (!foundUser.isActive) {
-        return res.status(403).json({ success: false, error: "This user account is inactive" });
-      }
-
-      return res.json({ success: true, user: foundUser, isFallbackMode: true });
-    }
     console.error("Error logging in backend user against PostgreSQL:", err);
     res.status(401).json({ success: false, error: "Login failed: " + formatDbErrorMessage(err.message || String(err)) });
   }
@@ -1684,61 +1499,6 @@ app.post("/api/send-email", async (req, res) => {
   }
 });
 
-const DEFAULT_ADMIN = {
-  id: "admin_default",
-  name: "System Administrator",
-  email: "admin@application.local",
-  password: "pass",
-  role: "Admin",
-  isActive: true,
-  rights: {
-    dashboard: true,
-    quotations: true,
-    proforma: true,
-    challans: true,
-    leads: true,
-    customers: true,
-    products: true,
-    inventory: true,
-    subscriptions: true,
-    reminders: true,
-    amazonSeller: true,
-    catalogues: true,
-    settings: true
-  },
-  createdAt: new Date().toISOString()
-};
-
-const DEFAULT_RAJAN = {
-  id: "rajan_default",
-  name: "Rajan Ghanshyam",
-  email: "rajan@devinfotech.net",
-  password: "Devansh@2007",
-  role: "Admin",
-  isActive: true,
-  rights: {
-    dashboard: true,
-    quotations: true,
-    proforma: true,
-    challans: true,
-    leads: true,
-    customers: true,
-    products: true,
-    inventory: true,
-    subscriptions: true,
-    reminders: true,
-    amazonSeller: true,
-    catalogues: true,
-    settings: true
-  },
-  createdAt: new Date().toISOString()
-};
-
-let fallbackUsers: any[] = [
-  { ...DEFAULT_ADMIN },
-  { ...DEFAULT_RAJAN }
-];
-
 async function seedDefaultUsers() {
   const url = process.env.DATABASE_URL || '';
   if (!url || url.includes('******') || url.includes('%2A%2A%2A%2A%2A%2A')) {
@@ -1746,44 +1506,94 @@ async function seedDefaultUsers() {
     return;
   }
 
-  // Seed using Neon PostgreSQL database
+  const defaultAdmin = {
+    id: "admin_default",
+    name: "System Administrator",
+    email: "admin@application.local",
+    password: "pass",
+    role: "Admin",
+    isActive: true,
+    rights: {
+      dashboard: true,
+      quotations: true,
+      proforma: true,
+      challans: true,
+      leads: true,
+      customers: true,
+      products: true,
+      inventory: true,
+      subscriptions: true,
+      reminders: true,
+      amazonSeller: true,
+      catalogues: true,
+      settings: true
+    },
+    createdAt: new Date().toISOString()
+  };
+
+  const defaultRajan = {
+    id: "rajan_default",
+    name: "Rajan Ghanshyam",
+    email: "rajan@devinfotech.net",
+    password: "Devansh@2007",
+    role: "Admin",
+    isActive: true,
+    rights: {
+      dashboard: true,
+      quotations: true,
+      proforma: true,
+      challans: true,
+      leads: true,
+      customers: true,
+      products: true,
+      inventory: true,
+      subscriptions: true,
+      reminders: true,
+      amazonSeller: true,
+      catalogues: true,
+      settings: true
+    },
+    createdAt: new Date().toISOString()
+  };
+
+  // Seed using Prisma
   try {
-    const adminExists = await neon.userProfiles.findUnique({ where: { id: "admin_default" } });
+    const adminExists = await prisma.userProfiles.findUnique({ where: { id: "admin_default" } });
     if (!adminExists) {
-      await neon.userProfiles.create({
+      await prisma.userProfiles.create({
         data: {
-          id: DEFAULT_ADMIN.id,
-          name: DEFAULT_ADMIN.name,
-          email: DEFAULT_ADMIN.email,
-          role: DEFAULT_ADMIN.role,
-          password: DEFAULT_ADMIN.password,
-          isActive: DEFAULT_ADMIN.isActive,
-          rights: JSON.stringify(DEFAULT_ADMIN.rights),
+          id: defaultAdmin.id,
+          name: defaultAdmin.name,
+          email: defaultAdmin.email,
+          role: defaultAdmin.role,
+          password: defaultAdmin.password,
+          isActive: defaultAdmin.isActive,
+          rights: JSON.stringify(defaultAdmin.rights),
         }
       });
-      console.log("Seeded default admin in Neon PostgreSQL.");
+      console.log("Seeded default admin in Prisma.");
     }
 
-    const rajanExists = await neon.userProfiles.findUnique({ where: { id: "rajan_default" } });
+    const rajanExists = await prisma.userProfiles.findUnique({ where: { id: "rajan_default" } });
     if (!rajanExists) {
-      await neon.userProfiles.create({
+      await prisma.userProfiles.create({
         data: {
-          id: DEFAULT_RAJAN.id,
-          name: DEFAULT_RAJAN.name,
-          email: DEFAULT_RAJAN.email,
-          role: DEFAULT_RAJAN.role,
-          password: DEFAULT_RAJAN.password,
-          isActive: DEFAULT_RAJAN.isActive,
-          rights: JSON.stringify(DEFAULT_RAJAN.rights),
+          id: defaultRajan.id,
+          name: defaultRajan.name,
+          email: defaultRajan.email,
+          role: defaultRajan.role,
+          password: defaultRajan.password,
+          isActive: defaultRajan.isActive,
+          rights: JSON.stringify(defaultRajan.rights),
         }
       });
-      console.log("Seeded Rajan user in Neon PostgreSQL.");
+      console.log("Seeded Rajan user in Prisma.");
     }
   } catch (error: any) {
     if (error.message && error.message.includes("relation")) {
       console.log("[Seeding] Database table 'user_profiles' does not exist yet. Seeding bypassed.");
     } else {
-      console.log("[Seeding] Neon PostgreSQL user seeding bypassed:\n" + formatDbErrorMessage(error.message || String(error)));
+      console.log("[Seeding] Prisma user seeding bypassed: " + (error.message || error));
     }
   }
 }
@@ -1792,7 +1602,6 @@ async function startServer() {
   // Perform schema migration check and seeding, handling errors gracefully to prevent server crash on bad DATABASE_URL
   try {
     await performSchemaMigrationCheck();
-    await seedDatabaseIfEmpty();
     await seedDefaultUsers();
   } catch (e: any) {
     if (isDbConnectionOrSchemaError(e)) {

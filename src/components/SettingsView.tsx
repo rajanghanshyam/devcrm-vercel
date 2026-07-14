@@ -1227,8 +1227,8 @@ export default function SettingsView({
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
             <div className="flex justify-between items-center border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-800">Live Database Snapshot Backup</h3>
-                <p className="text-xs text-slate-500">Download complete online database data instantly as a standalone snapshot file, or import a previously downloaded backup JSON file.</p>
+                <h3 className="text-lg font-bold text-slate-800">Local Offline Data Backup</h3>
+                <p className="text-xs text-slate-500">Download complete application data instantly as a standalone file, or import a previously downloaded backup JSON file.</p>
               </div>
             </div>
             
@@ -1285,7 +1285,7 @@ export default function SettingsView({
             <div className="flex justify-between items-center border-b border-slate-100 pb-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-800">Cloud Data Management</h3>
-                <p className="text-xs text-slate-500">Securely back up your live quotations, stock inventory, leads, and customer data directly into your personal Google Drive account.</p>
+                <p className="text-xs text-slate-500">Securely back up your offline quotations, stock inventory, leads, and customer data directly into your personal Google Drive account.</p>
               </div>
             </div>
             

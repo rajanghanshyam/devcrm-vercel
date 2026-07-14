@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_CKJeIpENPciRWhzUInFCCllvt8QA",
+      "name": "devcrm-vercel",
+      "directory": ".",
+      "orgId": "team_YMOZuxAGqbe8vHWB9NHr1kza"
+    }
+  ]
+}
