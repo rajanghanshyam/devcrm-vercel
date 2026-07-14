@@ -46,73 +46,6 @@ export function isDbConnectionOrSchemaError(error: any): boolean {
   );
 }
 
-// Robust helper functions to parse potential non-standard date formats (e.g. DD/MM/YYYY) safely
-export function parseDateSafe(dateVal: any): Date {
-  if (!dateVal) return new Date();
-  if (dateVal instanceof Date) {
-    return isNaN(dateVal.getTime()) ? new Date() : dateVal;
-  }
-  
-  const str = String(dateVal).trim();
-  if (!str) return new Date();
-  
-  // 1. Check if DD/MM/YYYY
-  const standardMatch = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-  if (standardMatch) {
-    const [, day, month, year] = standardMatch;
-    const d = new Date(Number(year), Number(month) - 1, Number(day));
-    if (!isNaN(d.getTime())) return d;
-  }
-
-  // 2. Check if YYYY-MM-DD
-  const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (isoMatch) {
-    const [, year, month, day] = isoMatch;
-    const d = new Date(Number(year), Number(month) - 1, Number(day));
-    if (!isNaN(d.getTime())) return d;
-  }
-
-  const d = new Date(str);
-  if (!isNaN(d.getTime())) {
-    return d;
-  }
-
-  return new Date();
-}
-
-export function parseDateSafeOrNull(dateVal: any): Date | null {
-  if (!dateVal) return null;
-  if (dateVal instanceof Date) {
-    return isNaN(dateVal.getTime()) ? null : dateVal;
-  }
-  
-  const str = String(dateVal).trim();
-  if (!str) return null;
-  
-  // 1. Check if DD/MM/YYYY
-  const standardMatch = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-  if (standardMatch) {
-    const [, day, month, year] = standardMatch;
-    const d = new Date(Number(year), Number(month) - 1, Number(day));
-    if (!isNaN(d.getTime())) return d;
-  }
-
-  // 2. Check if YYYY-MM-DD
-  const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (isoMatch) {
-    const [, year, month, day] = isoMatch;
-    const d = new Date(Number(year), Number(month) - 1, Number(day));
-    if (!isNaN(d.getTime())) return d;
-  }
-
-  const d = new Date(str);
-  if (!isNaN(d.getTime())) {
-    return d;
-  }
-
-  return null;
-}
-
 // Initialize Google GenAI lazily
 let aiInstance: GoogleGenAI | null = null;
 function getAI(): GoogleGenAI | null {
@@ -242,6 +175,56 @@ app.post("/api/db/save", async (req, res) => {
     res.status(500).json({ success: false, error: formatDbErrorMessage(error.message || String(error)) });
   }
 });
+
+function parseSafeDate(val: any): Date {
+  if (!val) return new Date();
+  if (val instanceof Date) {
+    return isNaN(val.getTime()) ? new Date() : val;
+  }
+  
+  const str = String(val).trim();
+  
+  // 1. Check DD/MM/YYYY or DD-MM-YYYY first (to avoid month/day swapping or invalid parsing)
+  const dmyMatch = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const month = parseInt(dmyMatch[2], 10) - 1; // 0-indexed month
+    const year = parseInt(dmyMatch[3], 10);
+    const d = new Date(year, month, day);
+    if (!isNaN(d.getTime())) return d;
+  }
+  
+  // 2. Fallback to standard JS Date parser
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) return d;
+  
+  return new Date();
+}
+
+function parseSafeDateOrNull(val: any): Date | null {
+  if (!val) return null;
+  if (val instanceof Date) {
+    return isNaN(val.getTime()) ? null : val;
+  }
+  
+  const str = String(val).trim();
+  
+  // 1. Check DD/MM/YYYY or DD-MM-YYYY first
+  const dmyMatch = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const month = parseInt(dmyMatch[2], 10) - 1; // 0-indexed month
+    const year = parseInt(dmyMatch[3], 10);
+    const d = new Date(year, month, day);
+    if (!isNaN(d.getTime())) return d;
+  }
+  
+  // 2. Fallback to standard JS Date parser
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) return d;
+  
+  return null;
+}
 
 // Direct granular single-entry save endpoint
 app.post("/api/save-entry", async (req, res) => {
@@ -421,8 +404,8 @@ app.post("/api/save-entry", async (req, res) => {
         where: { id: data.id },
         update: {
           quotationNo: data.quotationNo,
-          date: data.date ? new Date(data.date) : new Date(),
-          validUntil: data.validUntil ? new Date(data.validUntil) : null,
+          date: data.date ? parseSafeDate(data.date) : new Date(),
+          validUntil: parseSafeDateOrNull(data.validUntil),
           customerId: data.customerId,
           subject: data.subject,
           subtotal: data.subtotal || 0,
@@ -438,15 +421,15 @@ app.post("/api/save-entry", async (req, res) => {
           freight: data.freight,
           additionalDiscount: data.additionalDiscount,
           customerSignature: data.customerSignature,
-          customerSignedAt: data.customerSignedAt ? new Date(data.customerSignedAt) : null,
+          customerSignedAt: parseSafeDateOrNull(data.customerSignedAt),
           revisionNumber: data.revisionNumber,
           updatedAt: new Date()
         },
         create: {
           id: data.id,
           quotationNo: data.quotationNo,
-          date: data.date ? new Date(data.date) : new Date(),
-          validUntil: data.validUntil ? new Date(data.validUntil) : null,
+          date: data.date ? parseSafeDate(data.date) : new Date(),
+          validUntil: parseSafeDateOrNull(data.validUntil),
           customerId: data.customerId,
           subject: data.subject,
           subtotal: data.subtotal || 0,
@@ -462,9 +445,9 @@ app.post("/api/save-entry", async (req, res) => {
           freight: data.freight,
           additionalDiscount: data.additionalDiscount,
           customerSignature: data.customerSignature,
-          customerSignedAt: data.customerSignedAt ? new Date(data.customerSignedAt) : null,
+          customerSignedAt: parseSafeDateOrNull(data.customerSignedAt),
           revisionNumber: data.revisionNumber,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+          createdAt: data.createdAt ? parseSafeDate(data.createdAt) : new Date(),
           updatedAt: new Date()
         
       }
@@ -511,8 +494,8 @@ app.post("/api/save-entry", async (req, res) => {
         update: {
           invoiceNo: data.invoiceNo,
           quotationNo: data.quotationNo,
-          date: data.date ? new Date(data.date) : new Date(),
-          dueDate: data.dueDate ? new Date(data.dueDate) : null,
+          date: data.date ? parseSafeDate(data.date) : new Date(),
+          dueDate: parseSafeDateOrNull(data.dueDate),
           customerId: data.customerId,
           subject: data.subject,
           subtotal: data.subtotal || 0,
@@ -528,15 +511,15 @@ app.post("/api/save-entry", async (req, res) => {
           freight: data.freight,
           additionalDiscount: data.additionalDiscount,
           customerSignature: data.customerSignature,
-          customerSignedAt: data.customerSignedAt ? new Date(data.customerSignedAt) : null,
+          customerSignedAt: parseSafeDateOrNull(data.customerSignedAt),
           updatedAt: new Date()
         },
         create: {
           id: data.id,
           invoiceNo: data.invoiceNo,
           quotationNo: data.quotationNo,
-          date: data.date ? new Date(data.date) : new Date(),
-          dueDate: data.dueDate ? new Date(data.dueDate) : null,
+          date: data.date ? parseSafeDate(data.date) : new Date(),
+          dueDate: parseSafeDateOrNull(data.dueDate),
           customerId: data.customerId,
           subject: data.subject,
           subtotal: data.subtotal || 0,
@@ -552,8 +535,8 @@ app.post("/api/save-entry", async (req, res) => {
           freight: data.freight,
           additionalDiscount: data.additionalDiscount,
           customerSignature: data.customerSignature,
-          customerSignedAt: data.customerSignedAt ? new Date(data.customerSignedAt) : null,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+          customerSignedAt: parseSafeDateOrNull(data.customerSignedAt),
+          createdAt: data.createdAt ? parseSafeDate(data.createdAt) : new Date(),
           updatedAt: new Date()
         
       }
@@ -599,7 +582,7 @@ app.post("/api/save-entry", async (req, res) => {
         where: { id: data.id },
         update: {
           challanNo: data.challanNo,
-          date: data.date ? new Date(data.date) : new Date(),
+          date: data.date ? parseSafeDate(data.date) : new Date(),
           customerId: data.customerId,
           vehicleNo: data.vehicleNo,
           transporter: data.transporter,
@@ -613,7 +596,7 @@ app.post("/api/save-entry", async (req, res) => {
         create: {
           id: data.id,
           challanNo: data.challanNo,
-          date: data.date ? new Date(data.date) : new Date(),
+          date: data.date ? parseSafeDate(data.date) : new Date(),
           customerId: data.customerId,
           vehicleNo: data.vehicleNo,
           transporter: data.transporter,
@@ -622,7 +605,7 @@ app.post("/api/save-entry", async (req, res) => {
           status: data.status,
           notes: data.notes,
           companyId: data.companyId || null,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+          createdAt: data.createdAt ? parseSafeDate(data.createdAt) : new Date(),
           updatedAt: new Date()
         
       }
@@ -656,7 +639,7 @@ app.post("/api/save-entry", async (req, res) => {
           status: data.status,
           source: data.source,
           notes: data.notes,
-          date: data.date ? new Date(data.date) : null,
+          date: parseSafeDateOrNull(data.date),
           conversionStatus: data.conversionStatus,
           updatedAt: new Date()
         },
@@ -671,9 +654,9 @@ app.post("/api/save-entry", async (req, res) => {
           status: data.status,
           source: data.source,
           notes: data.notes,
-          date: data.date ? new Date(data.date) : null,
+          date: parseSafeDateOrNull(data.date),
           conversionStatus: data.conversionStatus,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+          createdAt: data.createdAt ? parseSafeDate(data.createdAt) : new Date(),
           updatedAt: new Date()
         
       }
@@ -702,8 +685,8 @@ app.post("/api/save-entry", async (req, res) => {
           serviceName: data.serviceName,
           amount: data.amount || 0,
           billingCycle: data.billingCycle,
-          startDate: parseDateSafe(data.startDate),
-          nextRenewalDate: parseDateSafe(data.nextRenewalDate),
+          startDate: parseSafeDate(data.startDate),
+          nextRenewalDate: parseSafeDate(data.nextRenewalDate),
           status: data.status,
           description: data.description,
           updatedAt: new Date()
@@ -714,11 +697,11 @@ app.post("/api/save-entry", async (req, res) => {
           serviceName: data.serviceName,
           amount: data.amount || 0,
           billingCycle: data.billingCycle,
-          startDate: parseDateSafe(data.startDate),
-          nextRenewalDate: parseDateSafe(data.nextRenewalDate),
+          startDate: parseSafeDate(data.startDate),
+          nextRenewalDate: parseSafeDate(data.nextRenewalDate),
           status: data.status,
           description: data.description,
-          createdAt: parseDateSafe(data.createdAt),
+          createdAt: data.createdAt ? parseSafeDate(data.createdAt) : new Date(),
           updatedAt: new Date()
         
       }
@@ -731,7 +714,7 @@ app.post("/api/save-entry", async (req, res) => {
         update: {
           title: data.title,
           description: data.description,
-          dueDate: parseDateSafe(data.dueDate),
+          dueDate: parseSafeDate(data.dueDate),
           status: data.status,
           priority: data.priority,
           relatedTo: data.relatedTo,
@@ -743,13 +726,13 @@ app.post("/api/save-entry", async (req, res) => {
           id: data.id,
           title: data.title,
           description: data.description,
-          dueDate: parseDateSafe(data.dueDate),
+          dueDate: parseSafeDate(data.dueDate),
           status: data.status,
           priority: data.priority,
           relatedTo: data.relatedTo,
           subscriptionId: data.subscriptionId || null,
           customerId: data.customerId || null,
-          createdAt: parseDateSafe(data.createdAt),
+          createdAt: data.createdAt ? parseSafeDate(data.createdAt) : new Date(),
           updatedAt: new Date()
         
       }
@@ -794,7 +777,7 @@ app.post("/api/save-entry", async (req, res) => {
           purchaseFrom: data.purchaseFrom || null,
           unitPrice: cleanUnitPrice,
           latestPurchasePrice: cleanLatestPurchasePrice,
-          lastUpdated: data.lastUpdated ? new Date(data.lastUpdated) : new Date()
+          lastUpdated: data.lastUpdated ? parseSafeDate(data.lastUpdated) : new Date()
         },
         create: {
           id: data.id,
@@ -806,8 +789,8 @@ app.post("/api/save-entry", async (req, res) => {
           purchaseFrom: data.purchaseFrom || null,
           unitPrice: cleanUnitPrice,
           latestPurchasePrice: cleanLatestPurchasePrice,
-          lastUpdated: data.lastUpdated ? new Date(data.lastUpdated) : new Date(),
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date()
+          lastUpdated: data.lastUpdated ? parseSafeDate(data.lastUpdated) : new Date(),
+          createdAt: data.createdAt ? parseSafeDate(data.createdAt) : new Date()
         }
       });
 
@@ -817,7 +800,7 @@ app.post("/api/save-entry", async (req, res) => {
             data: {
               id: log.id || "log_" + Math.random().toString(36).substring(2, 15) + "_" + Date.now(),
               inventoryItemId: data.id,
-              date: log.date ? new Date(log.date) : new Date(),
+              date: log.date ? parseSafeDate(log.date) : new Date(),
               type: log.type || "IN",
               quantity: Number(log.quantity) || 0,
               reason: log.reason || null,

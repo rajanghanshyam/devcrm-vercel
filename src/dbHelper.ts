@@ -1,28 +1,28 @@
 import { prisma } from './db';
 
-function parseDate(dateStr: string | null | undefined): Date | null {
+function parseDate(dateStr: string | Date | null | undefined): Date | null {
   if (!dateStr) return null;
+  if (dateStr instanceof Date) {
+    return isNaN(dateStr.getTime()) ? null : dateStr;
+  }
+  
   const str = String(dateStr).trim();
-  if (!str) return null;
-
-  // 1. Check if DD/MM/YYYY
-  const standardMatch = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-  if (standardMatch) {
-    const [, day, month, year] = standardMatch;
-    const d = new Date(Number(year), Number(month) - 1, Number(day));
+  
+  // 1. Check DD/MM/YYYY or DD-MM-YYYY first (to avoid month/day swapping or invalid parsing)
+  const dmyMatch = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const month = parseInt(dmyMatch[2], 10) - 1; // 0-indexed month
+    const year = parseInt(dmyMatch[3], 10);
+    const d = new Date(year, month, day);
     if (!isNaN(d.getTime())) return d;
   }
-
-  // 2. Check if YYYY-MM-DD
-  const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (isoMatch) {
-    const [, year, month, day] = isoMatch;
-    const d = new Date(Number(year), Number(month) - 1, Number(day));
-    if (!isNaN(d.getTime())) return d;
-  }
-
+  
+  // 2. Fallback to standard JS Date parser
   const d = new Date(str);
-  return isNaN(d.getTime()) ? null : d;
+  if (!isNaN(d.getTime())) return d;
+  
+  return null;
 }
 
 export async function saveToPrisma(payload: any) {
