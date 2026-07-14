@@ -9,22 +9,43 @@ pg.types.setTypeParser(1700, function(val) {
 let _pool: pg.Pool | null = null;
 
 function getPoolInstance(): pg.Pool {
-  const url = process.env.DATABASE_URL || '';
-  if (!url) {
+  let url = process.env.DATABASE_URL || '';
+  let unpooledUrl = process.env.DATABASE_URL_UNPOOLED || '';
+
+  // Determine the best URL to use (prefer non-empty, non-masked)
+  let selectedUrl = '';
+  const isMasked = (str: string) => str.includes('******') || str.includes('%2A%2A%2A%2A%2A%2A');
+
+  if (url && !isMasked(url)) {
+    selectedUrl = url;
+  } else if (unpooledUrl && !isMasked(unpooledUrl)) {
+    selectedUrl = unpooledUrl;
+  } else if (url) {
+    selectedUrl = url; // Fallback to DATABASE_URL even if masked
+  } else if (unpooledUrl) {
+    selectedUrl = unpooledUrl; // Fallback to DATABASE_URL_UNPOOLED even if masked
+  }
+
+  if (!selectedUrl) {
     throw new Error("DB_NOT_CONFIGURED");
   }
 
-  if (url.includes('******') || url.includes('%2A%2A%2A%2A%2A%2A')) {
+  if (isMasked(selectedUrl)) {
     throw new Error("DB_MASKED");
+  }
+
+  const isPostgres = selectedUrl.startsWith('postgres://') || selectedUrl.startsWith('postgresql://');
+  if (!isPostgres) {
+    throw new Error("DB_NOT_CONFIGURED");
   }
 
   if (!_pool) {
     const config: pg.PoolConfig = {
-      connectionString: url,
+      connectionString: selectedUrl,
     };
 
-    // Configure SSL for cloud hosted PostgreSQL databases if sslmode or ssl is specified
-    if (url.includes('sslmode=') || url.includes('ssl=true')) {
+    // Configure SSL for cloud hosted PostgreSQL databases if sslmode or ssl is specified, or default to true for Neon
+    if (selectedUrl.includes('sslmode=') || selectedUrl.includes('ssl=true') || selectedUrl.includes('neon.tech')) {
       config.ssl = {
         rejectUnauthorized: false
       };
@@ -328,7 +349,7 @@ async function $queryRaw(strings: TemplateStringsArray, ...values: any[]) {
   return res.rows;
 }
 
-export const prisma = new Proxy({} as any, {
+export const neon = new Proxy({} as any, {
   get(target, prop: string) {
     if (prop === '$transaction') {
       return $transaction;
@@ -350,3 +371,5 @@ export const prisma = new Proxy({} as any, {
     };
   }
 });
+
+export const prisma = neon;

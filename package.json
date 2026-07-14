@@ -9,10 +9,12 @@
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test-db": "tsx src/testConnection.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
+    "@neondatabase/serverless": "^1.1.0",
     "@radix-ui/react-dialog": "^1.1.19",
     "@radix-ui/react-toast": "^1.2.19",
     "@tailwindcss/vite": "^4.1.14",

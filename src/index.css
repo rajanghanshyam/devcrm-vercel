@@ -98,15 +98,8 @@
     page-break-inside: auto;
   }
   tr {
-    page-break-inside: avoid;
-    page-break-after: auto;
-  }
-
-  .page-break-inside-auto,
-  tr.page-break-inside-auto,
-  td.page-break-inside-auto {
-    page-break-inside: auto !important;
-    break-inside: auto !important;
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
   }
 
   /* Cover Page print layout to fit exactly on page 1 without spillover */

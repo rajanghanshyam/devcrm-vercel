@@ -1142,26 +1142,25 @@ export default function ProformaInvoiceView({
 
                 {/* Optional Header Image / Graphic */}
                 <table className="w-full border-collapse">
-                  <tbody>
-                    <tr className="page-break-inside-auto">
-                      <td className="p-0 border-none h-full align-top page-break-inside-auto">
-                        <div className="print:pl-[0.50in] print:pr-[0.30in] space-y-8 flex-grow w-full">
-                          {/* Corporate Letterhead (Printed once on Page 1) */}
-                          {compProfile.headerImage && (
-                            <div className="w-full flex flex-col items-center mb-4">
-                              <img 
-                                src={compProfile.headerImage} 
-                                alt="Corporate Header Banner" 
-                                className="w-full h-auto" 
-                                referrerPolicy="no-referrer"
-                              />
-                            </div>
-                          )}
+                  <thead className="print:table-header-group">
+                    <tr>
+                      <td className="p-0 border-none pb-4">
+                        {compProfile.headerImage && (
+                          <div className="w-full flex flex-col items-center mb-4">
+                            <img 
+                              src={compProfile.headerImage} 
+                              alt="Corporate Header Banner" 
+                              className="w-full h-auto" 
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                        )}
+                        <div className="print:pl-[0.50in] print:pr-[0.30in] w-full">
                           {/* If the header graphic was used, we still need to render the Document ID info block below it */}
                           {compProfile.headerImage && (
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-2.5 px-4 bg-slate-50 rounded-lg border border-slate-150 gap-4 text-xs font-sans mb-6">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-2.5 px-4 bg-slate-50 rounded-lg border border-slate-150 gap-4 text-xs font-sans">
                               <div>
-                                <span className="text-slate-450 font-bold uppercase text-[9px] tracking-wider block">Tax Demands Proforma for</span>
+                                <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider block">Tax Demands Proforma for</span>
                                 <span className="font-bold text-slate-800 text-sm">{client?.company || "N/A"}</span>
                               </div>
                               <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] text-slate-600">
@@ -1172,6 +1171,15 @@ export default function ProformaInvoiceView({
                               </div>
                             </div>
                           )}
+                        </div>
+                      </td>
+                    </tr>
+                  </thead>
+                  
+                  <tbody className="print:table-row-group">
+                    <tr>
+                      <td className="p-0 border-none h-full align-top">
+                        <div className="print:pl-[0.50in] print:pr-[0.30in] space-y-8 flex-grow w-full">
 
 
                 {/* Billed to - Consignee Section (Updated with GSTIN) */}
