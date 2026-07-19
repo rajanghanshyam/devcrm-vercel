@@ -4,40 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="961bd25d-c891-46f3-b9c7-56ccea1563e1" name="Changes" comment="Merge remote-tracking branch 'origin/main'">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_7_13_2026_9_55_PM_[Changes]/shelved.patch" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_7_13_2026_9_55_PM__Changes_.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/assets/html2canvas.esm-QH1iLAAe.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/assets/index-BNOpH6C0.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/assets/index-BkS4jRuq.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/assets/index.es-Mht8Nbl7.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/assets/purify.es-V6uLfjnH.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/assets/react-CCXFnprz.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/assets/ui-QvG3fJu9.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/assets/vendor-l0sNRNKZ.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/index.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/server.cjs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/server.cjs.map" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/backup.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/backup.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/ChallanView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ChallanView.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/DatabaseStatus.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/DatabaseStatus.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/LoginView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/LoginView.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/ProformaInvoiceView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ProformaInvoiceView.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/QuotationsView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/QuotationsView.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/SettingsView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/SettingsView.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/db.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/db.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dbHelper.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/dbHelper.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/index.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/index.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/schemaCheck.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/schemaCheck.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils.ts" afterDir="false" />
-    </list>
+    <list default="true" id="961bd25d-c891-46f3-b9c7-56ccea1563e1" name="Changes" comment="Merge remote-tracking branch 'origin/main'" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -275,7 +242,15 @@
       <option name="project" value="LOCAL" />
       <updated>1783955578910</updated>
     </task>
-    <option name="localTasksCounter" value="14" />
+    <task id="LOCAL-00014" summary="Merge remote-tracking branch 'origin/main'">
+      <option name="closed" value="true" />
+      <created>1784049288731</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1784049288731</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

@@ -128,12 +128,10 @@ export default function App() {
     enableGst: activeProfile.enableGst !== false
   };
 
-  // Directly save updated table states to the database using granular, atomic row saving
-  const directSaveToDb = async (payload: any) => {
+  // Dynamic database synchronization helper to update dynamic tables safely using direct connectivity without sync method
+  const syncModelWithServer = async (payload: any) => {
     try {
       const keys = Object.keys(payload);
-      console.log("Directly computing granular differences for online Neon database:", keys);
-      
       for (const key of keys) {
         let model = key;
         let oldList: any[] = [];
@@ -146,9 +144,9 @@ export default function App() {
           oldList = productsRef.current;
         } else if (key === "quotations") {
           oldList = quotationsRef.current;
-        } else if (key === "proforma_invoices") {
+        } else if (key === "proforma_invoices" || key === "invoices") {
           oldList = invoicesRef.current;
-          model = "proforma_invoices";
+          model = "invoices";
         } else if (key === "challans") {
           oldList = challansRef.current;
         } else if (key === "leads") {
@@ -164,82 +162,37 @@ export default function App() {
         const newList = payload[key] || [];
         
         // 1. Identify deleted items (exist in oldList but missing in newList)
-        const newIds = new Set(newList.map((x: any) => x && x.id));
-        const deleted = oldList.filter((x: any) => x && x.id && !newIds.has(x.id));
+        const newIds = new Set(newList.map((x: any) => x.id));
+        const deleted = oldList.filter((x: any) => !newIds.has(x.id));
         
         for (const item of deleted) {
-          console.log(`Directly deleting ${model} with ID: ${item.id} from Neon`);
+          console.log(`Directly deleting ${model} with ID: ${item.id}`);
           fetch("/api/db/delete", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ model, id: item.id })
-          })
-          .then(res => res.json())
-          .then(data => {
-            if (!data.success) {
-              console.error(`Failed to delete ${model} with ID ${item.id}:`, data.error);
-            }
-          })
-          .catch(err => console.error(`Failed to delete ${model}:`, err));
+          }).catch(err => console.error(`Failed to delete ${model}:`, err));
         }
         
         // 2. Identify created/updated items (new, or changed from oldList)
-        const oldMap = new Map(oldList.filter((x: any) => x && x.id).map((x: any) => [x.id, x]));
+        const oldMap = new Map(oldList.map((x: any) => [x.id, x]));
         for (const item of newList) {
-          if (!item || !item.id) continue;
           const oldItem = oldMap.get(item.id);
           const isNew = !oldItem;
           const isChanged = oldItem && JSON.stringify(item) !== JSON.stringify(oldItem);
           
           if (isNew || isChanged) {
-            console.log(`Directly saving ${model} with ID: ${item.id} to Neon (${isNew ? 'New' : 'Updated'})`);
+            console.log(`Directly saving ${model} with ID: ${item.id} (${isNew ? 'New' : 'Updated'})`);
             fetch("/api/save-entry", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ model, data: item })
-            })
-            .then(res => res.json())
-            .then(data => {
-              if (!data.success) {
-                console.error(`Failed to save ${model} with ID ${item.id}:`, data.error);
-                setDbError(data.error);
-              } else {
-                setDbError(null);
-              }
-            })
-            .catch(err => {
-              console.error(`Failed to save ${model} with ID ${item.id}:`, err);
-              setDbError(err.message || String(err));
-            });
+            }).catch(err => console.error(`Failed to save ${model}:`, err));
           }
         }
-
-        // 3. Update the corresponding ref with the newList so subsequent calls use it as the baseline
-        if (key === "company_profiles") {
-          companyProfilesRef.current = newList;
-        } else if (key === "customers") {
-          customersRef.current = newList;
-        } else if (key === "products") {
-          productsRef.current = newList;
-        } else if (key === "quotations") {
-          quotationsRef.current = newList;
-        } else if (key === "proforma_invoices") {
-          invoicesRef.current = newList;
-        } else if (key === "challans") {
-          challansRef.current = newList;
-        } else if (key === "leads") {
-          leadsRef.current = newList;
-        } else if (key === "subscriptions") {
-          subscriptionsRef.current = newList;
-        } else if (key === "reminders") {
-          remindersRef.current = newList;
-        } else if (key === "inventory") {
-          inventoryItemsRef.current = newList;
-        }
       }
-    } catch (err: any) {
-      console.error("Direct granular database save failed due to unexpected error:", err);
-      setDbError(err.message || String(err));
+    } catch (err) {
+      console.error("Failed to directly sync database entry:", err);
     }
   };
 
@@ -254,7 +207,7 @@ export default function App() {
         return res.json();
       })
       .then((resData) => {
-        if (resData.success && resData.data && resData.data.company_profiles && resData.data.company_profiles.length > 0) {
+        if (resData.success && resData.data && Object.keys(resData.data).length > 0) {
           const s = resData.data;
           if (s.company_profiles) {
             setCompanyProfiles(s.company_profiles);
@@ -321,6 +274,27 @@ export default function App() {
           remindersRef.current = SEED_REMINDERS;
           setInventoryItems(SEED_INVENTORY);
           inventoryItemsRef.current = SEED_INVENTORY;
+          
+          if (resData.success) {
+            // Write starting seed to server right away so they exist
+            const startingState = {
+              company_profiles: SEED_COMPANY_PROFILES,
+              customers: SEED_CUSTOMERS,
+              products: SEED_PRODUCTS,
+              quotations: SEED_QUOTATIONS,
+              proforma_invoices: SEED_PROFORMA_INVOICES,
+              challans: SEED_CHALLANS,
+              leads: SEED_LEADS,
+              subscriptions: SEED_SUBSCRIPTIONS,
+              reminders: SEED_REMINDERS,
+              inventory: SEED_INVENTORY
+            };
+            fetch("/api/db/save", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(startingState)
+            }).catch(err => console.error("Could not write initial starting state seeds to server:", err));
+          }
         }
       })
       .catch((err) => {
@@ -354,37 +328,44 @@ export default function App() {
   // Database persistence helper wrappers using transaction-safe batch updates
   const updateCompanyProfiles = (updated: CompanyProfile[]) => {
     setCompanyProfiles(updated);
-    directSaveToDb({ company_profiles: updated });
+    companyProfilesRef.current = updated;
+    syncModelWithServer({ company_profiles: updated });
   };
 
   const updateCustomers = (updated: Customer[]) => {
     setCustomers(updated);
-    directSaveToDb({ customers: updated });
+    customersRef.current = updated;
+    syncModelWithServer({ customers: updated });
   };
 
   const updateProducts = (updated: Product[]) => {
     setProducts(updated);
-    directSaveToDb({ products: updated });
+    productsRef.current = updated;
+    syncModelWithServer({ products: updated });
   };
 
   const updateQuotations = (updated: Quotation[]) => {
     setQuotations(updated);
-    directSaveToDb({ quotations: updated });
+    quotationsRef.current = updated;
+    syncModelWithServer({ quotations: updated });
   };
 
   const updateInvoices = (updated: ProformaInvoice[]) => {
     setInvoices(updated);
-    directSaveToDb({ proforma_invoices: updated });
+    invoicesRef.current = updated;
+    syncModelWithServer({ proforma_invoices: updated });
   };
 
   const updateChallans = (updated: DeliveryChallan[]) => {
     setChallans(updated);
-    directSaveToDb({ challans: updated });
+    challansRef.current = updated;
+    syncModelWithServer({ challans: updated });
   };
 
   const updateLeads = (updated: Lead[]) => {
     setLeads(updated);
-    directSaveToDb({ leads: updated });
+    leadsRef.current = updated;
+    syncModelWithServer({ leads: updated });
   };
 
   const updateSubscriptions = (updatedSubs: Subscription[]) => {
@@ -400,6 +381,7 @@ export default function App() {
     });
 
     setSubscriptions(checkedSubs);
+    subscriptionsRef.current = checkedSubs;
 
     let newReminders = [...remindersRef.current];
 
@@ -428,8 +410,9 @@ export default function App() {
     });
 
     setReminders(newReminders);
+    remindersRef.current = newReminders;
 
-    directSaveToDb({
+    syncModelWithServer({
       subscriptions: checkedSubs,
       reminders: newReminders
     });
@@ -437,12 +420,14 @@ export default function App() {
 
   const updateReminders = (updated: Reminder[]) => {
     setReminders(updated);
-    directSaveToDb({ reminders: updated });
+    remindersRef.current = updated;
+    syncModelWithServer({ reminders: updated });
   };
   
   const updateInventory = (updated: InventoryItem[]) => {
     setInventoryItems(updated);
-    directSaveToDb({ inventory: updated });
+    inventoryItemsRef.current = updated;
+    syncModelWithServer({ inventory: updated });
   };
 
   // Convert Quotation into active Proforma Invoice (SaaS/Corporate ease!)
@@ -533,18 +518,7 @@ export default function App() {
                   <p>
                     The server failed to authenticate or connect with your PostgreSQL database.
                   </p>
-                  {dbError.includes('password') || dbError.toLowerCase().includes('password authentication failed') || dbError.includes('neondb_owner') ? (
-                    <div className="bg-white/80 p-3 rounded border border-red-100 font-sans text-xs text-red-800 leading-normal">
-                      <strong className="text-red-900 font-semibold block mb-1">Reason: Database password authentication failed</strong>
-                      <p>This indicates that the password provided in your <code>DATABASE_URL</code> or <code>DATABASE_URL_UNPOOLED</code> is incorrect or has expired.</p>
-                      <p className="mt-2 text-slate-800 font-semibold">To resolve this:</p>
-                      <ol className="list-decimal list-inside mt-1 space-y-1 text-slate-700">
-                        <li>Go to your <strong>Neon console</strong> (or PostgreSQL provider dashboard) and copy your correct connection string.</li>
-                        <li>Open Google AI Studio, click <strong>Settings</strong> (gear icon) in the sidebar/header, then choose <strong>Environment Variables</strong>.</li>
-                        <li>Locate <code>DATABASE_URL</code> and <code>DATABASE_URL_UNPOOLED</code> and update them with the correct password. Ensure no leading or trailing spaces are copied.</li>
-                      </ol>
-                    </div>
-                  ) : dbError.includes('******') || dbError.includes('%2A%2A%2A%2A%2A%2A') ? (
+                  {dbError.includes('******') || dbError.includes('%2A%2A%2A%2A%2A%2A') ? (
                     <div className="bg-white/80 p-3 rounded border border-red-100 font-mono text-[11px] md:text-xs text-red-700 leading-normal">
                       <strong>Reason:</strong> Your <code>DATABASE_URL</code> contains <code>******</code> (the masked/hidden password placeholder) instead of your actual database password.
                       <p className="mt-2 text-slate-800 font-sans">

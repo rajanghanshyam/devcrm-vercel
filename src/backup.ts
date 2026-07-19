@@ -84,7 +84,7 @@ export const restoreFromCloud = async (fileId: string) => {
 
         if (res.ok) {
             const data = await res.json();
-            // Restore directly to Neon PostgreSQL backend database
+            // Restore directly to Prisma PostgreSQL backend database
             const saveRes = await fetch("/api/db/save", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

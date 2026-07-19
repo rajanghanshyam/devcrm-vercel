@@ -56,6 +56,7 @@ export default function QuotationsView({
   const [companyFilter, setCompanyFilter] = useState("All");
   const [coverTheme, setCoverTheme] = useState<"classic-blue" | "modern-gold" | "tech-dark" | "minimal-charcoal" | "corporate-accent">("corporate-accent");
   const [includeCoverPage, setIncludeCoverPage] = useState(false);
+  const [scaleView, setScaleView] = useState<"fit" | "a4">("fit");
   
   // Views navigation inside Quotations: "list" | "create" | "detail" | "edit"
   const [activeSubView, setActiveSubView] = useState<"list" | "create" | "detail" | "edit">("list");
@@ -403,7 +404,7 @@ export default function QuotationsView({
   };
 
   // Save creation / edition
-  const saveQuotation = (e: React.FormEvent) => {
+  const saveQuotation = (e: React.FormEvent, overrideStatus?: Quotation["status"]) => {
     e.preventDefault();
     if (!formCustomerId) {
       alert("Please select a customer first.");
@@ -415,6 +416,7 @@ export default function QuotationsView({
     }
 
     const { subtotal, discountTotal, cgstTotal, sgstTotal, igstTotal, grandTotal } = getFormCalculatedTotals();
+    const finalStatus = overrideStatus || formStatus;
 
     if (activeSubView === "create") {
       let revisionOfId: string | undefined = undefined;
@@ -443,7 +445,7 @@ export default function QuotationsView({
         sgstTotal,
         igstTotal,
         grandTotal,
-        status: formStatus,
+        status: finalStatus,
         terms: formTerms,
         companyId: formCompanyId,
         templateType: formTemplateType,
@@ -489,7 +491,7 @@ export default function QuotationsView({
             sgstTotal,
             igstTotal,
             grandTotal,
-            status: formStatus,
+            status: finalStatus,
             terms: formTerms,
             companyId: formCompanyId,
             templateType: formTemplateType,
@@ -1225,6 +1227,16 @@ export default function QuotationsView({
               Cancel
             </button>
             <button
+              type="button"
+              onClick={(e) => {
+                setFormStatus("Draft");
+                saveQuotation(e, "Draft");
+              }}
+              className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-250 text-slate-800 font-bold text-xs cursor-pointer select-none transition-all border border-slate-300"
+            >
+              Save as Draft
+            </button>
+            <button
               type="submit"
               className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-750 text-white font-bold text-xs cursor-pointer select-none transition-all shadow-md shadow-indigo-600/10"
             >
@@ -1305,6 +1317,69 @@ export default function QuotationsView({
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Document Preview & Scale Options Bar */}
+          <div className="bg-white border border-slate-200 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-sans max-w-4xl mx-auto print:hidden shadow-sm">
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Cover page checkbox toggle */}
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="toggle-cover-page"
+                  checked={includeCoverPage}
+                  onChange={(e) => setIncludeCoverPage(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
+                />
+                <label htmlFor="toggle-cover-page" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                  Include Cover Page
+                </label>
+              </div>
+
+              {includeCoverPage && (
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg">
+                  <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">Cover Theme:</span>
+                  <select
+                    value={coverTheme}
+                    onChange={(e) => setCoverTheme(e.target.value as any)}
+                    className="bg-white border border-slate-250 rounded px-2 py-1 text-xs text-slate-700 font-semibold focus:outline-none cursor-pointer"
+                  >
+                    <option value="corporate-accent">Corporate Premium</option>
+                    <option value="classic-blue">Classic Blue</option>
+                    <option value="modern-gold">Modern Gold</option>
+                    <option value="tech-dark">Tech Dark</option>
+                    <option value="minimal-charcoal">Minimal Charcoal</option>
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Scale view selector */}
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 p-1 rounded-lg">
+              <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 px-2">Scale View:</span>
+              <button
+                type="button"
+                onClick={() => setScaleView("fit")}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                  scaleView === "fit"
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "bg-white hover:bg-slate-100 text-slate-600 border border-slate-200"
+                }`}
+              >
+                Fit Screen
+              </button>
+              <button
+                type="button"
+                onClick={() => setScaleView("a4")}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                  scaleView === "a4"
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "bg-white hover:bg-slate-100 text-slate-600 border border-slate-200"
+                }`}
+              >
+                A4 Page (100% Scale)
+              </button>
+            </div>
           </div>
 
 
@@ -1677,13 +1752,16 @@ export default function QuotationsView({
 
             return (
               <div 
-                className="space-y-8 max-w-4xl w-full mx-auto print:space-y-0 print:max-w-none"
+                className={scaleView === "a4" 
+                  ? "space-y-8 w-full mx-auto print:space-y-0 print:max-w-none bg-slate-200/60 p-6 sm:p-10 rounded-2xl border border-slate-300/80 shadow-inner flex flex-col items-center overflow-x-auto select-none" 
+                  : "space-y-8 max-w-4xl w-full mx-auto print:space-y-0 print:max-w-none"
+                }
                 id="printable-area-container"
               >
                 {/* -------------------- AMC COVER PAGE SECTION -------------------- */}
                 {isAmcCover && (
                   <div 
-                    className={`flex flex-col justify-between p-8 sm:p-12 md:p-16 select-none font-sans relative overflow-hidden
+                    className={`flex flex-col justify-between select-none font-sans relative overflow-hidden shrink-0
                       ${
                         coverTheme === "classic-blue" ? "bg-slate-50 text-slate-800" :
                         coverTheme === "modern-gold" ? "bg-amber-50/20 text-amber-950" :
@@ -1691,9 +1769,18 @@ export default function QuotationsView({
                         coverTheme === "corporate-accent" ? "bg-white text-slate-900" :
                         "bg-white text-slate-950"
                       } 
-                      w-full rounded-xl border border-slate-300 shadow-xl min-h-[100vh]
+                      ${scaleView === "a4" 
+                        ? "shadow-2xl border border-slate-300 mx-auto" 
+                        : "w-full rounded-xl border border-slate-300 shadow-xl p-8 sm:p-12 md:p-16 min-h-[100vh]"
+                      }
                       print:border-0 print:rounded-none print:shadow-none print:p-10 print:m-0 print:print-cover-page print:w-full`}
-                    style={{ minHeight: "100vh" }}
+                    style={scaleView === "a4" ? {
+                      width: "210mm",
+                      height: "297mm",
+                      minHeight: "297mm",
+                      padding: "20mm",
+                      boxSizing: "border-box"
+                    } : { minHeight: "100vh" }}
                   >
                     {/* Decorative Corner / Top accents */}
                     {coverTheme === "classic-blue" && (
@@ -1820,7 +1907,7 @@ export default function QuotationsView({
                         </div>
                       </div>
                     ) : compProfile.headerImage ? (
-                      <div className="-mx-8 sm:-mx-12 md:-mx-16 -mt-8 sm:-mt-12 md:-mt-16 print:-mx-10 print:-mt-10 mb-8 overflow-hidden h-48 sm:h-56 print:h-64 relative rounded-t-2xl print:rounded-none shadow-sm">
+                      <div className={`${scaleView === "a4" ? "-mx-[20mm] -mt-[20mm]" : "-mx-8 sm:-mx-12 md:-mx-16 -mt-8 sm:-mt-12 md:-mt-16"} print:-mx-10 print:-mt-10 mb-8 overflow-hidden h-48 sm:h-56 print:h-64 relative rounded-t-2xl print:rounded-none shadow-sm`}>
                         <img 
                           src={compProfile.headerImage} 
                           alt="Cover Page Header Image" 
@@ -1843,7 +1930,7 @@ export default function QuotationsView({
                         </div>
                       </div>
                     ) : (
-                      <div className={`-mx-8 sm:-mx-12 md:-mx-16 -mt-8 sm:-mt-12 md:-mt-16 print:-mx-10 print:-mt-10 mb-8 h-32 print:h-40 flex items-center justify-between px-8 sm:px-12 md:px-16 print:px-10 relative overflow-hidden select-none rounded-t-2xl print:rounded-none ${
+                      <div className={`${scaleView === "a4" ? "-mx-[20mm] -mt-[20mm]" : "-mx-8 sm:-mx-12 md:-mx-16 -mt-8 sm:-mt-12 md:-mt-16"} print:-mx-10 print:-mt-10 mb-8 h-32 print:h-40 flex items-center justify-between px-8 sm:px-12 md:px-16 print:px-10 relative overflow-hidden select-none rounded-t-2xl print:rounded-none ${
                         coverTheme === "classic-blue" ? "bg-gradient-to-r from-indigo-700 to-indigo-900 text-white" :
                         coverTheme === "modern-gold" ? "bg-gradient-to-r from-amber-700 to-amber-900 text-white" :
                         coverTheme === "tech-dark" ? "bg-gradient-to-r from-slate-900 to-teal-950 text-white border-b border-teal-500/20" :
@@ -2010,11 +2097,25 @@ export default function QuotationsView({
                 {/* Printable Styles for Browser */}
 
                 {/* Main Quotation Sheet Card */}
-                <div className="w-full rounded-xl border border-slate-300 shadow-xl p-8 sm:p-12 md:p-16 bg-white text-slate-900 flex flex-col font-sans print:border-0 print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full">
+                <div 
+                  className={`bg-white text-slate-900 flex flex-col font-sans shrink-0
+                    ${scaleView === "a4" 
+                      ? "shadow-2xl border border-slate-300 mx-auto" 
+                      : "w-full rounded-xl border border-slate-300 shadow-xl p-8 sm:p-12 md:p-16"
+                    }
+                    print:border-0 print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full`}
+                  style={scaleView === "a4" ? {
+                    width: "210mm",
+                    minHeight: "297mm",
+                    padding: "20mm",
+                    boxSizing: "border-box"
+                  } : undefined}
+                >
                   <table className="w-full border-collapse">
-                  <thead className="print:table-header-group">
-                    <tr>
-                      <td className="p-0 border-none font-normal text-left">
+                  <tbody>
+                    <tr className="page-break-inside-auto">
+                      <td className="p-0 border-none page-break-inside-auto">
+                        {/* Corporate Letterhead and Invoice Details (Printed once on Page 1) */}
                         {compProfile.headerImage && (
                           <div className="w-full mb-6">
                             <img 
@@ -2058,13 +2159,7 @@ export default function QuotationsView({
                              </div>
                           </div>
                         )}
-                      </td>
-                    </tr>
-                  </thead>
-                  
-                  <tbody>
-                    <tr>
-                      <td className="p-0 border-none">
+
                         {/* Client / Customer Party Info */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 text-xs leading-relaxed text-left mb-0 pb-0">
                           <div className="space-y-1">

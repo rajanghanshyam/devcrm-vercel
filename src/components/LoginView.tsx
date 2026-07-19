@@ -43,18 +43,7 @@ export default function LoginView() {
                 <p>
                   The server failed to authenticate or connect with your PostgreSQL database.
                 </p>
-                {dbError.includes('password') || dbError.toLowerCase().includes('password authentication failed') || dbError.includes('neondb_owner') ? (
-                  <div className="bg-white/80 p-3 rounded border border-red-100 font-sans text-xs text-red-800 leading-normal">
-                    <strong className="text-red-900 font-semibold block mb-1">Reason: Database password authentication failed</strong>
-                    <p>This indicates that the password provided in your <code>DATABASE_URL</code> or <code>DATABASE_URL_UNPOOLED</code> is incorrect or has expired.</p>
-                    <p className="mt-2 text-slate-800 font-semibold">To resolve this:</p>
-                    <ol className="list-decimal list-inside mt-1 space-y-1 text-slate-700">
-                      <li>Go to your <strong>Neon console</strong> (or PostgreSQL provider dashboard) and copy your correct connection string.</li>
-                      <li>Open Google AI Studio, click <strong>Settings</strong> (gear icon) in the sidebar/header, then choose <strong>Environment Variables</strong>.</li>
-                      <li>Locate <code>DATABASE_URL</code> and <code>DATABASE_URL_UNPOOLED</code> and update them with the correct password. Ensure no leading or trailing spaces are copied.</li>
-                    </ol>
-                  </div>
-                ) : dbError.includes('******') || dbError.includes('%2A%2A%2A%2A%2A%2A') ? (
+                {dbError.includes('******') || dbError.includes('%2A%2A%2A%2A%2A%2A') ? (
                   <div className="bg-white/80 p-3 rounded border border-red-100 font-mono text-[11px] md:text-xs text-red-700 leading-normal">
                     <strong>Reason:</strong> Your <code>DATABASE_URL</code> contains <code>******</code> (the masked/hidden password placeholder) instead of your actual database password.
                     <p className="mt-2 text-slate-800 font-sans">
