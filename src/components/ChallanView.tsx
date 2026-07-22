@@ -14,7 +14,9 @@ interface ChallanViewProps {
   customers: Customer[];
   companySettings: CompanySettings;
   companyProfiles: CompanyProfile[];
+  onUpdateCompanyProfiles?: (updated: CompanyProfile[]) => void;
   onUpdateChallans: (updated: DeliveryChallan[]) => void;
+  activeCompanyId?: string;
 }
 
 export default function ChallanView({
@@ -22,11 +24,19 @@ export default function ChallanView({
   customers,
   companySettings,
   companyProfiles,
-  onUpdateChallans
+  onUpdateCompanyProfiles,
+  onUpdateChallans,
+  activeCompanyId = ""
 }: ChallanViewProps) {
   
   const [searchTerm, setSearchTerm] = useState("");
-  const [companyFilter, setCompanyFilter] = useState("All");
+  const [companyFilter, setCompanyFilter] = useState(activeCompanyId || "All");
+
+  React.useEffect(() => {
+    if (activeCompanyId) {
+      setCompanyFilter(activeCompanyId);
+    }
+  }, [activeCompanyId]);
   const [activeSubView, setActiveSubView] = useState<"list" | "detail" | "create">("list");
   const [activeChallanId, setActiveChallanId] = useState<string | null>(null);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -94,11 +104,17 @@ export default function ChallanView({
       nextNum = challans.length + 1;
     }
 
-    return `${prefix}/${financialYear}/${String(nextNum).padStart(3, "0")}`;
+    let candidate = `${prefix}/${financialYear}/${String(nextNum).padStart(3, "0")}`;
+    while (challans.some(c => c.challanNo.toUpperCase().trim() === candidate.toUpperCase().trim())) {
+      nextNum++;
+      candidate = `${prefix}/${financialYear}/${String(nextNum).padStart(3, "0")}`;
+    }
+
+    return candidate;
   };
 
   const openCreateForm = () => {
-    const initialCompanyId = companyProfiles[0]?.id || "default";
+    const initialCompanyId = companyProfiles.find(p => p.id === activeCompanyId)?.id || companyProfiles.find(p => p.isDefault)?.id || companyProfiles[0]?.id || "default";
     setFormCompanyId(initialCompanyId);
     setFormChallanNo(generateNewChallanNo(initialCompanyId));
     setFormDate(new Date().toISOString().split("T")[0]);
@@ -153,6 +169,14 @@ export default function ChallanView({
       return;
     }
 
+    // Check for duplicate challan number
+    const targetChallanNo = formChallanNo.toUpperCase().trim();
+    const duplicate = challans.find(c => c.challanNo.toUpperCase().trim() === targetChallanNo);
+    if (duplicate) {
+      alert(`Error: A Delivery Challan with the number "${formChallanNo}" already exists in the system. Please provide a unique number.`);
+      return;
+    }
+
     const newChallan: DeliveryChallan = {
       id: "dc_" + Date.now(),
       challanNo: formChallanNo,
@@ -167,6 +191,31 @@ export default function ChallanView({
       notes: formNotes,
       companyId: formCompanyId
     };
+
+    // Increment company serial index counter for delivery challan
+    if (companyProfiles && onUpdateCompanyProfiles && formCompanyId) {
+      const profile = companyProfiles.find(p => p.id === formCompanyId);
+      let nextNum = (profile?.nextChallanNumber || 1) + 1;
+      
+      const match = formChallanNo.match(/\/(\d+)$/);
+      if (match) {
+        const parsed = parseInt(match[1], 10);
+        if (!isNaN(parsed) && parsed >= (profile?.nextChallanNumber || 1)) {
+          nextNum = parsed + 1;
+        }
+      }
+
+      const updatedProfiles = companyProfiles.map(p => {
+        if (p.id === formCompanyId) {
+          return {
+            ...p,
+            nextChallanNumber: nextNum
+          };
+        }
+        return p;
+      });
+      onUpdateCompanyProfiles(updatedProfiles);
+    }
 
     onUpdateChallans([newChallan, ...challans]);
     setActiveSubView("list");
@@ -591,13 +640,29 @@ export default function ChallanView({
 
                 {/* Optional Header Image / Graphic */}
                 <table className="w-full border-collapse">
+                  {compProfile.headerImage && (
+                    <thead className="hidden print:table-header-group">
+                      <tr>
+                        <td className="p-0 border-none">
+                          <div className="print:pl-[0.50in] print:pr-[0.30in] w-full pb-6">
+                            <img 
+                              src={compProfile.headerImage} 
+                              alt="Corporate Header Banner" 
+                              className="w-full h-auto" 
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    </thead>
+                  )}
                   <tbody>
                     <tr className="page-break-inside-auto">
                       <td className="p-0 border-none h-full align-top page-break-inside-auto">
                         <div className="print:pl-[0.50in] print:pr-[0.30in] space-y-8 flex-grow w-full">
-                          {/* Corporate Letterhead (Printed once on Page 1) */}
+                          {/* Corporate Letterhead */}
                           {compProfile.headerImage && (
-                            <div className="w-full flex flex-col items-center mb-4">
+                            <div className="w-full flex flex-col items-center mb-4 print:hidden">
                               <img 
                                 src={compProfile.headerImage} 
                                 alt="Corporate Header Banner" 
@@ -677,7 +742,12 @@ export default function ChallanView({
                             {idx + 1}
                           </td>
                           <td className="py-3 px-4 font-bold text-slate-800">
-                            {item.productName}
+                            <div>{item.productName}</div>
+                            {item.description && (
+                              <div className="text-[10px] text-slate-500 font-normal leading-relaxed whitespace-pre-wrap mt-0.5">
+                                {item.description}
+                              </div>
+                            )}
                           </td>
                           <td className="py-3 px-4 text-center font-mono">
                             {item.hsnCode || "-"}

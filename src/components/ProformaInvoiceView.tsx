@@ -30,6 +30,10 @@ interface ProformaInvoiceViewProps {
   companyProfiles?: CompanyProfile[];
   onUpdateInvoices: (updated: ProformaInvoice[]) => void;
   onUpdateCompanyProfiles?: (updated: CompanyProfile[]) => void;
+  initialSubView?: "list" | "create";
+  onSubViewChange?: (view: "list" | "create" | "detail" | "edit") => void;
+  onConvertToTaxInvoice?: (proforma: ProformaInvoice) => void;
+  activeCompanyId?: string;
 }
 
 export default function ProformaInvoiceView({
@@ -39,17 +43,41 @@ export default function ProformaInvoiceView({
   companySettings,
   companyProfiles = [],
   onUpdateInvoices,
-  onUpdateCompanyProfiles
+  onUpdateCompanyProfiles,
+  initialSubView,
+  onSubViewChange,
+  onConvertToTaxInvoice,
+  activeCompanyId = ""
 }: ProformaInvoiceViewProps) {
   
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [companyFilter, setCompanyFilter] = useState("All");
+  const [companyFilter, setCompanyFilter] = useState(activeCompanyId || "All");
+
+  React.useEffect(() => {
+    if (activeCompanyId) {
+      setCompanyFilter(activeCompanyId);
+    }
+  }, [activeCompanyId]);
   
   const [activeSubView, setActiveSubView] = useState<"list" | "create" | "detail" | "edit">("list");
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null);
   
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (initialSubView) {
+      if (initialSubView === "create") {
+        openCreateForm();
+      } else {
+        setActiveSubView(initialSubView);
+      }
+    }
+  }, [initialSubView]);
+
+  React.useEffect(() => {
+    onSubViewChange?.(activeSubView);
+  }, [activeSubView]);
 
   // Form State variables for direct creation/editing
   const [formInvoiceNo, setFormInvoiceNo] = useState("");
@@ -68,9 +96,15 @@ export default function ProformaInvoiceView({
 
   // Helper sequence generator
   const generateNewInvoiceNumber = (profile: any) => {
-    const nextNum = profile.nextInvoiceNumber || 1;
     const prefix = profile.invoicePrefix || "PI";
-    return `${prefix}-${String(nextNum).padStart(4, '0')}`;
+    let nextNum = profile.nextInvoiceNumber || 1;
+    
+    let candidate = `${prefix}-${String(nextNum).padStart(4, '0')}`;
+    while (invoices.some(i => i.invoiceNo.toUpperCase().trim() === candidate.toUpperCase().trim())) {
+      nextNum++;
+      candidate = `${prefix}-${String(nextNum).padStart(4, '0')}`;
+    }
+    return candidate;
   };
 
   const selectInvoice = (invId: string) => {
@@ -138,7 +172,7 @@ export default function ProformaInvoiceView({
     expDate.setDate(expDate.getDate() + 15);
     const expStr = expDate.toISOString().split("T")[0];
 
-    const initialProfile = companyProfiles[0] || { id: "comp_apex" };
+    const initialProfile = companyProfiles.find(p => p.id === activeCompanyId) || companyProfiles.find(p => p.isDefault) || companyProfiles[0] || { id: "comp_apex" };
     const resolvedProfile = getDocCompanyProfile(initialProfile.id);
 
     setFormCompanyId(resolvedProfile.id || "comp_apex");
@@ -314,8 +348,24 @@ export default function ProformaInvoiceView({
       return;
     }
 
-    const totals = getFormCalculatedTotals();
     const isEdit = activeSubView === "edit";
+    const targetInvoiceNo = formInvoiceNo.toUpperCase().trim();
+
+    if (isEdit) {
+      const duplicate = invoices.find(i => i.id !== activeInvoiceId && i.invoiceNo.toUpperCase().trim() === targetInvoiceNo);
+      if (duplicate) {
+        alert(`Error: Another Proforma Invoice with the number "${formInvoiceNo}" already exists. Please provide a unique number.`);
+        return;
+      }
+    } else {
+      const duplicate = invoices.find(i => i.invoiceNo.toUpperCase().trim() === targetInvoiceNo);
+      if (duplicate) {
+        alert(`Error: A Proforma Invoice with the number "${formInvoiceNo}" already exists. Please provide a unique number.`);
+        return;
+      }
+    }
+
+    const totals = getFormCalculatedTotals();
 
     if (isEdit) {
       const updated = invoices.map(inv => {
@@ -386,21 +436,32 @@ export default function ProformaInvoiceView({
         additionalDiscount: formAdditionalDiscount
       };
 
-      // Also update sequence number in company profiles if sequence matches
-      const profile = companyProfiles.find(p => p.id === formCompanyId);
-      if (profile && onUpdateCompanyProfiles) {
-        const nextNum = profile.nextInvoiceNumber || 1;
-        const prefix = profile.invoicePrefix || "PI";
-        const expectedNo = `${prefix}-${String(nextNum).padStart(4, '0')}`;
-        if (formInvoiceNo === expectedNo) {
-          const updatedProfiles = companyProfiles.map(p => {
-            if (p.id === formCompanyId) {
-              return { ...p, nextInvoiceNumber: nextNum + 1 };
-            }
-            return p;
-          });
-          onUpdateCompanyProfiles(updatedProfiles);
+      // Increment company serial index counter for proforma invoice
+      if (companyProfiles && onUpdateCompanyProfiles && formCompanyId) {
+        const profile = companyProfiles.find(p => p.id === formCompanyId);
+        const prefix = profile?.invoicePrefix || "PI";
+        
+        let nextNum = (profile?.nextInvoiceNumber || 1) + 1;
+        // Parse serial number from formInvoiceNo to keep nextNum ahead
+        const regex = new RegExp(`${prefix}-(\\d+)$`, 'i');
+        const match = formInvoiceNo.match(regex);
+        if (match) {
+          const parsed = parseInt(match[1], 10);
+          if (!isNaN(parsed) && parsed >= (profile?.nextInvoiceNumber || 1)) {
+            nextNum = parsed + 1;
+          }
         }
+
+        const updatedProfiles = companyProfiles.map(p => {
+          if (p.id === formCompanyId) {
+            return {
+              ...p,
+              nextInvoiceNumber: nextNum
+            };
+          }
+          return p;
+        });
+        onUpdateCompanyProfiles(updatedProfiles);
       }
 
       onUpdateInvoices([newInvoice, ...invoices]);
@@ -1072,6 +1133,20 @@ export default function ProformaInvoiceView({
                   Confirm advance payment
                 </button>
               )}
+              {onConvertToTaxInvoice && (
+                <button
+                  onClick={() => {
+                    const inv = getSelectedInvoice();
+                    if (inv) {
+                      onConvertToTaxInvoice(inv);
+                      alert(`Proforma Invoice ${inv.invoiceNo} successfully converted to a Tax Invoice!`);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer transition-colors"
+                >
+                  <FileText className="w-4 h-4" /> Convert to Tax Invoice
+                </button>
+              )}
               <button
                 onClick={() => setIsEmailModalOpen(true)}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-800 hover:bg-blue-700 text-blue-200 hover:text-white text-xs font-bold cursor-pointer transition-colors"
@@ -1142,13 +1217,29 @@ export default function ProformaInvoiceView({
 
                 {/* Optional Header Image / Graphic */}
                 <table className="w-full border-collapse">
+                  {compProfile.headerImage && (
+                    <thead className="hidden print:table-header-group">
+                      <tr>
+                        <td className="p-0 border-none">
+                          <div className="print:pl-[0.50in] print:pr-[0.30in] w-full pb-6">
+                            <img 
+                              src={compProfile.headerImage} 
+                              alt="Corporate Header Banner" 
+                              className="w-full h-auto" 
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    </thead>
+                  )}
                   <tbody>
                     <tr className="page-break-inside-auto">
                       <td className="p-0 border-none h-full align-top page-break-inside-auto">
                         <div className="print:pl-[0.50in] print:pr-[0.30in] space-y-8 flex-grow w-full">
-                          {/* Corporate Letterhead (Printed once on Page 1) */}
-                          {compProfile.headerImage && (
-                            <div className="w-full flex flex-col items-center mb-4">
+                          {/* Corporate Letterhead */}
+                          {compProfile.headerImage ? (
+                            <div className="w-full flex flex-col items-center mb-4 print:hidden">
                               <img 
                                 src={compProfile.headerImage} 
                                 alt="Corporate Header Banner" 
@@ -1156,22 +1247,35 @@ export default function ProformaInvoiceView({
                                 referrerPolicy="no-referrer"
                               />
                             </div>
-                          )}
-                          {/* If the header graphic was used, we still need to render the Document ID info block below it */}
-                          {compProfile.headerImage && (
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-2.5 px-4 bg-slate-50 rounded-lg border border-slate-150 gap-4 text-xs font-sans mb-6">
-                              <div>
-                                <span className="text-slate-450 font-bold uppercase text-[9px] tracking-wider block">Tax Demands Proforma for</span>
-                                <span className="font-bold text-slate-800 text-sm">{client?.company || "N/A"}</span>
+                          ) : (
+                            <div className="flex flex-col sm:flex-row justify-between items-start border-b-2 border-slate-950 pb-6 gap-4 text-left">
+                              <div className="space-y-1 text-left">
+                                <h1 className="text-2xl font-black uppercase text-indigo-950 tracking-wide">{compProfile.name}</h1>
+                                <p className="text-xs text-slate-500 whitespace-pre-line leading-relaxed">{compProfile.address}</p>
                               </div>
-                              <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] text-slate-600">
-                                <div>Invoice #: <span className="font-bold text-slate-900 font-mono">{invoice.invoiceNo}</span></div>
-                                <div>Dated: <span className="font-bold text-slate-900">{formatDate(invoice.date)}</span></div>
-                                <div>Due Date: <span className="font-bold text-slate-900">{formatDate(invoice.dueDate)}</span></div>
-                                <div>Status: <span className="font-bold uppercase">{invoice.status}</span></div>
+                              <div className="text-left sm:text-right text-xs space-y-1">
+                                <div>GSTIN: <span className="font-bold font-mono">{compProfile.gstin}</span></div>
+                                {compProfile.pan && <div>PAN: <span className="font-bold font-mono">{compProfile.pan}</span></div>}
+                                <div>State: <span className="font-bold">{compProfile.state}</span></div>
+                                <div>Email: <span className="font-semibold text-slate-700">{compProfile.email}</span></div>
                               </div>
                             </div>
                           )}
+
+                          {/* Document identification strip with prominent PROFORMA INVOICE Title */}
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-2.5 px-4 bg-slate-50 rounded-lg border border-slate-150 gap-4 text-xs font-sans mb-6">
+                            <div className="text-left">
+                              <span className="text-indigo-800 font-black uppercase text-[12px] tracking-wider block">PROFORMA INVOICE</span>
+                              <span className="text-[10px] text-slate-500">For Customer:</span> <span className="font-bold text-slate-800 text-sm">{client?.company || "N/A"}</span>
+                            </div>
+                            <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] text-slate-600">
+                              <div>Doc #: <span className="font-bold text-slate-900 font-mono">{invoice.invoiceNo}</span></div>
+                              {invoice.quotationNo && <div>Ref Quote: <span className="font-bold text-slate-900 font-mono">{invoice.quotationNo}</span></div>}
+                              <div>Dated: <span className="font-bold text-slate-900">{formatDate(invoice.date)}</span></div>
+                              <div>Due Date: <span className="font-bold text-slate-900">{formatDate(invoice.dueDate)}</span></div>
+                              <div>Status: <span className="font-bold uppercase text-slate-900">{invoice.status}</span></div>
+                            </div>
+                          </div>
 
 
                 {/* Billed to - Consignee Section (Updated with GSTIN) */}
@@ -1227,6 +1331,11 @@ export default function ProformaInvoiceView({
                             </td>
                             <td className="py-3 px-4">
                               <div className="font-bold text-slate-800">{item.productName}</div>
+                              {item.description && (
+                                <div className="text-[10px] text-slate-500 font-normal leading-relaxed whitespace-pre-wrap mt-0.5">
+                                  {item.description}
+                                </div>
+                              )}
                             </td>
                             <td className="py-3 px-3 text-center font-mono">
                               {item.hsnCode || "-"}

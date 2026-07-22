@@ -19,7 +19,13 @@ import {
   Layers,
   Sparkles,
   Mail,
-  PenTool
+  PenTool,
+  Copy,
+  Trophy,
+  Lightbulb,
+  ShieldCheck,
+  TrendingUp,
+  Award
 } from "lucide-react";
 import { Quotation, Customer, Product, CompanySettings, QuotationItem, CompanyProfile } from "../types";
 import { formatINR, formatDate, calculateTaxTotals, toInputDate } from "../utils";
@@ -34,8 +40,10 @@ interface QuotationsViewProps {
   onUpdateCompanyProfiles?: (updated: CompanyProfile[]) => void;
   onUpdateQuotations: (updated: Quotation[]) => void;
   onConvertToInvoice: (quote: Quotation) => void;
+  onConvertToTaxInvoice?: (quote: Quotation) => void;
   onUpdateCustomers: (updated: Customer[]) => void;
   onUpdateProducts: (updated: Product[]) => void;
+  activeCompanyId?: string;
 }
 
 export default function QuotationsView({
@@ -47,20 +55,40 @@ export default function QuotationsView({
   onUpdateCompanyProfiles,
   onUpdateQuotations,
   onConvertToInvoice,
+  onConvertToTaxInvoice,
   onUpdateCustomers,
-  onUpdateProducts
+  onUpdateProducts,
+  activeCompanyId = ""
 }: QuotationsViewProps) {
   
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [companyFilter, setCompanyFilter] = useState("All");
-  const [coverTheme, setCoverTheme] = useState<"classic-blue" | "modern-gold" | "tech-dark" | "minimal-charcoal" | "corporate-accent">("corporate-accent");
+  const [companyFilter, setCompanyFilter] = useState(activeCompanyId || "All");
+
+  React.useEffect(() => {
+    if (activeCompanyId) {
+      setCompanyFilter(activeCompanyId);
+    }
+  }, [activeCompanyId]);
+  const [coverTheme, setCoverTheme] = useState<"classic-ivory" | "serene-sage" | "minimal-blue">("classic-ivory");
   const [includeCoverPage, setIncludeCoverPage] = useState(false);
-  const [scaleView, setScaleView] = useState<"fit" | "a4">("fit");
+  const [coverPageTitleType, setCoverPageTitleType] = useState<"amc" | "quotation">("quotation");
+  const [scaleView, setScaleView] = useState<"fit" | "a4">("a4");
   
   // Views navigation inside Quotations: "list" | "create" | "detail" | "edit"
   const [activeSubView, setActiveSubView] = useState<"list" | "create" | "detail" | "edit">("list");
   const [activeQuoteId, setActiveQuoteId] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    const quote = quotations.find(q => q.id === activeQuoteId);
+    if (quote) {
+      const hasAmc = quote.items.some(item => 
+        item.productName.toLowerCase().includes("amc") || 
+        item.productName.toLowerCase().includes("maintenance")
+      );
+      setCoverPageTitleType(hasAmc ? "amc" : "quotation");
+    }
+  }, [activeQuoteId, quotations]);
   
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
@@ -147,8 +175,14 @@ export default function QuotationsView({
   const generateNewQuoteNumber = (profile: CompanyProfile | any): string => {
     const currentYear = new Date().getFullYear();
     const prefix = profile?.quotationPrefix || "QTN";
-    const seq = profile?.nextQuotationNumber || (quotations.length + 101);
-    return `${prefix}-${String(currentYear).slice(2)}-${seq}`;
+    let seq = profile?.nextQuotationNumber || (quotations.length + 101);
+    
+    let candidate = `${prefix}-${String(currentYear).slice(2)}-${seq}`;
+    while (quotations.some(q => q.quotationNo.toUpperCase().trim() === candidate.toUpperCase().trim())) {
+      seq++;
+      candidate = `${prefix}-${String(currentYear).slice(2)}-${seq}`;
+    }
+    return candidate;
   };
 
   // Open "Create New" Form
@@ -158,7 +192,7 @@ export default function QuotationsView({
     expDate.setDate(expDate.getDate() + 30);
     const expStr = expDate.toISOString().split("T")[0];
 
-    const initialProfile = companyProfiles[0] || { id: "comp_apex" };
+    const initialProfile = companyProfiles.find(p => p.id === activeCompanyId) || companyProfiles.find(p => p.isDefault) || companyProfiles[0] || { id: "comp_apex" };
     const resolvedProfile = getDocCompanyProfile(initialProfile.id);
 
     // Reset Form
@@ -238,6 +272,31 @@ export default function QuotationsView({
     setFormAdditionalDiscount(quote.additionalDiscount || 0);
     
     setRevisingQuoteId(quote.id);
+    setActiveSubView("create");
+  };
+
+  // Open Copy / Duplicate Form
+  const openCopyForm = (quote: Quotation) => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const expDate = new Date();
+    expDate.setDate(expDate.getDate() + 30);
+    const expStr = expDate.toISOString().split("T")[0];
+
+    const resolvedProfile = getDocCompanyProfile(quote.companyId);
+
+    setFormCompanyId(quote.companyId || "comp_apex");
+    setFormTemplateType(quote.templateType || "Standard");
+    setFormTermsPresetId(quote.termsPresetId || "");
+    setFormQuoteNo(generateNewQuoteNumber(resolvedProfile));
+    setFormDate(todayStr);
+    setFormValidUntil(expStr);
+    setFormCustomerId(quote.customerId || "");
+    setFormTerms(quote.terms || "");
+    setFormItems(quote.items.map(item => ({ ...item })));
+    setFormStatus("Pending");
+    setFormFreight(quote.freight || 0);
+    setFormAdditionalDiscount(quote.additionalDiscount || 0);
+    setRevisingQuoteId(null);
     setActiveSubView("create");
   };
 
@@ -415,6 +474,22 @@ export default function QuotationsView({
       return;
     }
 
+    // Check for duplicate quotation number
+    const targetQuoteNo = formQuoteNo.toUpperCase().trim();
+    if (activeSubView === "create") {
+      const duplicate = quotations.find(q => q.quotationNo.toUpperCase().trim() === targetQuoteNo);
+      if (duplicate) {
+        alert(`Error: A quotation with the code "${formQuoteNo}" already exists in the system. Please provide a unique Quotation Code.`);
+        return;
+      }
+    } else {
+      const duplicate = quotations.find(q => q.id !== activeQuoteId && q.quotationNo.toUpperCase().trim() === targetQuoteNo);
+      if (duplicate) {
+        alert(`Error: Another quotation with the code "${formQuoteNo}" already exists in the system. Please provide a unique Quotation Code.`);
+        return;
+      }
+    }
+
     const { subtotal, discountTotal, cgstTotal, sgstTotal, igstTotal, grandTotal } = getFormCalculatedTotals();
     const finalStatus = overrideStatus || formStatus;
 
@@ -458,11 +533,27 @@ export default function QuotationsView({
 
       // Increment company serial index counter (only for non-revisions)
       if (!revisingQuoteId && companyProfiles && onUpdateCompanyProfiles && formCompanyId) {
+        const profile = companyProfiles.find(p => p.id === formCompanyId);
+        const prefix = profile?.quotationPrefix || "QTN";
+        const currentYear = new Date().getFullYear();
+        const yearSlice = String(currentYear).slice(2);
+        
+        let nextSeq = (profile?.nextQuotationNumber || 1) + 1;
+        // Parse serial sequence from the actual quotationNo being saved
+        const regex = new RegExp(`${prefix}-${yearSlice}-(\\d+)$`, 'i');
+        const match = formQuoteNo.match(regex);
+        if (match) {
+          const parsedSeq = parseInt(match[1], 10);
+          if (!isNaN(parsedSeq) && parsedSeq >= (profile?.nextQuotationNumber || 1)) {
+            nextSeq = parsedSeq + 1;
+          }
+        }
+
         const updatedProfiles = companyProfiles.map(p => {
           if (p.id === formCompanyId) {
             return {
               ...p,
-              nextQuotationNumber: (p.nextQuotationNumber || 1) + 1
+              nextQuotationNumber: nextSeq
             };
           }
           return p;
@@ -685,6 +776,13 @@ export default function QuotationsView({
                                 title="Edit Quotation"
                               >
                                 Edit
+                              </button>
+                              <button
+                                onClick={() => openCopyForm(q)}
+                                className="px-2.5 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-750 font-bold cursor-pointer border border-emerald-250 flex items-center gap-1"
+                                title="Copy / Duplicate this quotation as a new draft"
+                              >
+                                <Copy className="w-3 h-3 text-emerald-600" /> Copy
                               </button>
                               <button
                                 onClick={() => openRevisionForm(q)}
@@ -1272,8 +1370,23 @@ export default function QuotationsView({
                   disabled={getSelectedQuote()?.status === "Converted"}
                   className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-750 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold whitespace-nowrap cursor-pointer transition-colors"
                 >
-                  <FileCheck2 className="w-4 h-4" /> Convert to Invoice
+                  <FileCheck2 className="w-4 h-4" /> Convert to Proforma
                 </button>
+                {onConvertToTaxInvoice && (
+                  <button
+                    onClick={() => {
+                      const qObj = getSelectedQuote();
+                      if(qObj) {
+                        onConvertToTaxInvoice(qObj);
+                        alert(`Quotation ${qObj.quotationNo} successfully cloned & converted into an active Tax Invoice!`);
+                      }
+                    }}
+                    disabled={getSelectedQuote()?.status === "Converted"}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold whitespace-nowrap cursor-pointer transition-colors"
+                  >
+                    <FileCheck2 className="w-4 h-4" /> Convert to Tax Invoice
+                  </button>
+                )}
                 <button
                   onClick={() => setIsEmailModalOpen(true)}
                   className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 text-xs font-bold border border-blue-200 cursor-pointer transition-colors"
@@ -1302,6 +1415,18 @@ export default function QuotationsView({
                   className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 text-xs font-bold cursor-pointer transition-colors"
                 >
                   Edit Quotation
+                </button>
+                <button
+                  onClick={() => {
+                    const quote = getSelectedQuote();
+                    if (quote) {
+                      openCopyForm(quote);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold cursor-pointer transition-colors"
+                  title="Copy / Duplicate this quotation"
+                >
+                  <Copy className="w-4 h-4 text-emerald-600" /> Copy / Duplicate
                 </button>
                 <button
                   onClick={() => {
@@ -1336,6 +1461,19 @@ export default function QuotationsView({
                 </label>
               </div>
 
+              {/* Title / Header Type selector */}
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg">
+                <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">Quotation Title:</span>
+                <select
+                  value={coverPageTitleType}
+                  onChange={(e) => setCoverPageTitleType(e.target.value as "amc" | "quotation")}
+                  className="bg-white border border-slate-250 rounded px-2 py-1 text-xs text-slate-700 font-semibold focus:outline-none cursor-pointer"
+                >
+                  <option value="quotation">QUOTATION</option>
+                  <option value="amc">SERVICE AGREEMENT (AMC)</option>
+                </select>
+              </div>
+
               {includeCoverPage && (
                 <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg">
                   <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">Cover Theme:</span>
@@ -1344,11 +1482,9 @@ export default function QuotationsView({
                     onChange={(e) => setCoverTheme(e.target.value as any)}
                     className="bg-white border border-slate-250 rounded px-2 py-1 text-xs text-slate-700 font-semibold focus:outline-none cursor-pointer"
                   >
-                    <option value="corporate-accent">Corporate Premium</option>
-                    <option value="classic-blue">Classic Blue</option>
-                    <option value="modern-gold">Modern Gold</option>
-                    <option value="tech-dark">Tech Dark</option>
-                    <option value="minimal-charcoal">Minimal Charcoal</option>
+                    <option value="classic-ivory">Classic Ivory & Gold</option>
+                    <option value="serene-sage">Serene Sage Botanical</option>
+                    <option value="minimal-blue">Modern Minimalist Blue</option>
                   </select>
                 </div>
               )}
@@ -1582,7 +1718,7 @@ export default function QuotationsView({
                                       </td>
                                       <td className="py-3.5 px-4">
                                         <div className="font-bold text-slate-800">{item.productName}</div>
-                                        {item.description && <div className="text-[10px] text-slate-505 mt-1 whitespace-pre-wrap leading-relaxed">{item.description}</div>}
+                                        {item.description && <div className="text-[10px] text-slate-500 font-normal mt-0.5 whitespace-pre-wrap leading-relaxed">{item.description}</div>}
                                       </td>
                                       <td className="py-3.5 px-3 text-center font-mono">
                                         {item.hsnCode || "-"}
@@ -1635,7 +1771,7 @@ export default function QuotationsView({
 
                             {/* Calculation right column */}
                             <div className="w-full md:max-w-xs space-y-2.5 text-xs font-medium self-end font-sans">
-                              <div className="flex justify-between text-slate-505">
+                              <div className="flex justify-between text-slate-500">
                                 <span>Total Basic Value:</span>
                                 <span className="font-mono text-slate-800 font-semibold">{formatINR(quote.subtotal)}</span>
                               </div>
@@ -1646,7 +1782,7 @@ export default function QuotationsView({
                                 </div>
                               )}
                               {quote.additionalDiscount && quote.additionalDiscount > 0 ? (
-                                <div className="flex justify-between text-amber-705 font-semibold font-sans">
+                                <div className="flex justify-between text-amber-700 font-semibold font-sans">
                                   <span>Flat Discount:</span>
                                   <span className="font-mono">- {formatINR(quote.additionalDiscount)}</span>
                                 </div>
@@ -1666,19 +1802,19 @@ export default function QuotationsView({
 
                               {isGstEnabled && (isIntrastate ? (
                                 <>
-                                  <div className="flex justify-between text-slate-505">
+                                  <div className="flex justify-between text-slate-500">
                                     <span>CGST Amount:</span>
-                                    <span className="font-mono text-slate-705">{formatINR(quote.cgstTotal)}</span>
+                                    <span className="font-mono text-slate-700">{formatINR(quote.cgstTotal)}</span>
                                   </div>
-                                  <div className="flex justify-between text-slate-505 pb-2 border-b border-slate-200 border-dashed">
+                                  <div className="flex justify-between text-slate-500 pb-2 border-b border-slate-200 border-dashed">
                                     <span>SGST Amount:</span>
-                                    <span className="font-mono text-slate-705">{formatINR(quote.sgstTotal)}</span>
+                                    <span className="font-mono text-slate-700">{formatINR(quote.sgstTotal)}</span>
                                   </div>
                                 </>
                               ) : (
-                                <div className="flex justify-between text-slate-505 pb-2 border-b border-slate-200 border-dashed">
+                                <div className="flex justify-between text-slate-500 pb-2 border-b border-slate-200 border-dashed">
                                   <span>IGST Amount:</span>
-                                  <span className="font-mono text-slate-705 font-bold">{formatINR(quote.igstTotal)}</span>
+                                  <span className="font-mono text-slate-700 font-bold">{formatINR(quote.igstTotal)}</span>
                                 </div>
                               ))}
 
@@ -1753,27 +1889,26 @@ export default function QuotationsView({
             return (
               <div 
                 className={scaleView === "a4" 
-                  ? "space-y-8 w-full mx-auto print:space-y-0 print:max-w-none bg-slate-200/60 p-6 sm:p-10 rounded-2xl border border-slate-300/80 shadow-inner flex flex-col items-center overflow-x-auto select-none" 
-                  : "space-y-8 max-w-4xl w-full mx-auto print:space-y-0 print:max-w-none"
+                  ? `space-y-8 w-full mx-auto print:space-y-0 print:max-w-none bg-slate-200/60 p-6 sm:p-10 rounded-2xl border border-slate-300/80 shadow-inner flex flex-col items-center overflow-x-auto ${includeCoverPage ? "has-cover-page" : ""}`
+                  : `space-y-8 max-w-4xl w-full mx-auto print:space-y-0 print:max-w-none ${includeCoverPage ? "has-cover-page" : ""}`
                 }
                 id="printable-area-container"
               >
                 {/* -------------------- AMC COVER PAGE SECTION -------------------- */}
                 {isAmcCover && (
                   <div 
-                    className={`flex flex-col justify-between select-none font-sans relative overflow-hidden shrink-0
+                    className={`flex flex-col justify-between font-sans relative overflow-hidden shrink-0 z-50 print-cover-page
                       ${
-                        coverTheme === "classic-blue" ? "bg-slate-50 text-slate-800" :
-                        coverTheme === "modern-gold" ? "bg-amber-50/20 text-amber-950" :
-                        coverTheme === "tech-dark" ? "bg-slate-950 text-slate-200" :
-                        coverTheme === "corporate-accent" ? "bg-white text-slate-900" :
-                        "bg-white text-slate-950"
+                        coverTheme === "classic-ivory" ? "bg-[#faf8f5] text-stone-900" :
+                        coverTheme === "serene-sage" ? "bg-[#f4f7f5] text-emerald-950" :
+                        coverTheme === "minimal-blue" ? "bg-[#f5f9fc] text-slate-900" :
+                        "bg-white"
                       } 
                       ${scaleView === "a4" 
-                        ? "shadow-2xl border border-slate-300 mx-auto" 
-                        : "w-full rounded-xl border border-slate-300 shadow-xl p-8 sm:p-12 md:p-16 min-h-[100vh]"
+                        ? "shadow-2xl border border-slate-350 mx-auto" 
+                        : "w-full rounded-xl border border-slate-300 shadow-xl p-6 sm:p-10 md:p-12 min-h-[100vh]"
                       }
-                      print:border-0 print:rounded-none print:shadow-none print:p-10 print:m-0 print:print-cover-page print:w-full`}
+                      print:border-0 print:rounded-none print:shadow-none print:p-0 print:m-0 print:w-full`}
                     style={scaleView === "a4" ? {
                       width: "210mm",
                       height: "297mm",
@@ -1782,87 +1917,44 @@ export default function QuotationsView({
                       boxSizing: "border-box"
                     } : { minHeight: "100vh" }}
                   >
-                    {/* Decorative Corner / Top accents */}
-                    {coverTheme === "classic-blue" && (
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-2xl pointer-events-none" />
-                    )}
-                    {coverTheme === "modern-gold" && (
-                      <div className="absolute top-0 left-0 right-0 h-3 bg-amber-500/80" />
-                    )}
-                    {coverTheme === "tech-dark" && (
-                      <div className="absolute top-0 right-0 w-96 h-96 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
-                    )}
-                    {coverTheme === "minimal-charcoal" && (
-                      <div className="absolute top-0 left-0 w-full h-4 bg-slate-950" />
-                    )}
-                    {coverTheme === "corporate-accent" && (
+                    {/* Background light picture images with clean cover theme */}
+                    {coverTheme === "classic-ivory" && (
                       <>
-                        {/* Top-Right Premium Dark Slate Polygon matching the image layout */}
-                        <div 
-                          className="absolute top-0 right-0 w-[55%] h-[42%] bg-slate-900/95 pointer-events-none"
-                          style={{
-                            clipPath: "polygon(30% 0, 100% 0, 100% 100%, 0 0)",
-                            backgroundImage: "linear-gradient(135deg, #0f172a, #1e293b, #0f172a)"
-                          }}
-                        >
-                          {/* Inner elegant accent light */}
-                          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent" />
-                          <div className="absolute bottom-6 right-6 font-mono text-[9px] text-slate-400 tracking-wider text-right uppercase">
-                            <div>Corporate Document</div>
-                            <div className="text-slate-500 mt-0.5">REF: {quote.quotationNo}</div>
+                        <img 
+                          src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80" 
+                          alt="Classic Ivory & Gold Background" 
+                          className="absolute inset-0 w-full h-full object-cover opacity-6 mix-blend-multiply pointer-events-none z-0" 
+                          referrerPolicy="no-referrer"
+                        />
+                        {/* Elegant outer gold frame */}
+                        <div className="absolute inset-4 sm:inset-6 border border-amber-600/20 pointer-events-none rounded-lg z-0" />
+                        <div className="absolute inset-5 sm:inset-7 border border-dashed border-amber-600/10 pointer-events-none rounded-lg z-0" />
+                        <div className="absolute top-0 right-0 w-[60%] h-[45%] bg-gradient-to-bl from-amber-500/10 via-transparent to-transparent pointer-events-none z-0" />
+                        
+                        {/* Premium trust award badge at bottom-left */}
+                        <div className="absolute left-8 bottom-12 z-10 flex items-center gap-2 select-none scale-90 origin-left">
+                          <div className="flex flex-col items-center justify-center bg-amber-50 border border-amber-200 text-amber-700 font-extrabold w-12 h-12 rounded-full shadow-sm">
+                            <Award className="w-6 h-6 text-amber-600" />
+                          </div>
+                          <div className="text-left leading-tight">
+                            <div className="text-[9px] font-bold text-amber-600 uppercase tracking-widest font-mono">CLASSIC SELECTION</div>
+                            <div className="text-[10px] font-black text-stone-800 uppercase tracking-wider">PREMIUM PARTNER</div>
                           </div>
                         </div>
 
-                        {/* Bottom-Left Golden-Yellow chevron block matching the image layout */}
-                        <div 
-                          className="absolute left-0 bottom-0 w-[42%] h-[48%] bg-amber-400 pointer-events-none"
-                          style={{
-                            clipPath: "polygon(0 35%, 100% 100%, 45% 100%, 0 65%)"
-                          }}
-                        />
-                        <div 
-                          className="absolute left-0 bottom-0 w-[42%] h-[48%] bg-amber-400/30 pointer-events-none"
-                          style={{
-                            clipPath: "polygon(0 65%, 45% 100%, 0 100%)"
-                          }}
-                        />
-
-                        {/* Thin elegant parallel lines running diagonally at the bottom */}
-                        <div 
-                          className="absolute left-[15%] bottom-[5%] w-[35%] h-[20%] pointer-events-none opacity-40 select-none"
-                          style={{
-                            background: "repeating-linear-gradient(135deg, transparent, transparent 12px, #475569 12px, #475569 13.5px)"
-                          }}
-                        />
-
-                        {/* Years badge in the bottom-left space */}
-                        <div className="absolute left-8 bottom-12 z-10 flex items-center gap-2 font-sans select-none scale-90 origin-left">
-                          <div className="flex flex-col items-center justify-center bg-indigo-650 text-white font-extrabold w-12 h-12 rounded-lg shadow-sm">
-                            <span className="text-lg leading-none">08</span>
-                            <span className="text-[7px] tracking-tight leading-none uppercase">Years</span>
-                          </div>
-                          <div className="text-left leading-none font-sans">
-                            <div className="text-[9px] font-bold text-slate-600 uppercase">of trust &</div>
-                            <div className="text-[10px] font-black text-indigo-750 uppercase">service</div>
-                          </div>
-                        </div>
-
-                        {/* Barcode/QR Code in the bottom right corner */}
+                        {/* QR Code in bottom-right with amber styling */}
                         <div className="absolute right-8 bottom-12 z-10 flex flex-col items-end gap-1.5 opacity-80 scale-90 origin-right print:opacity-100">
-                          <svg className="w-16 h-16 text-slate-800" viewBox="0 0 100 100" fill="currentColor">
-                            {/* Outer QR box */}
+                          <svg className="w-16 h-16 text-amber-700/70" viewBox="0 0 100 100" fill="currentColor">
                             <path d="M0,0 h30 v10 h-20 v20 h-10 z" />
                             <path d="M70,0 h30 v30 h-10 v-20 h-20 z" />
                             <path d="M0,70 h10 v20 h20 v10 h-30 z" />
                             <path d="M100,70 h-10 v20 h-20 v10 h30 z" />
-                            {/* Core QR blocks */}
                             <rect x="15" y="15" width="20" height="20" />
-                            <rect x="20" y="20" width="10" height="10" fill="white" />
+                            <rect x="20" y="20" width="10" height="10" fill="#faf8f5" />
                             <rect x="65" y="15" width="20" height="20" />
-                            <rect x="70" y="20" width="10" height="10" fill="white" />
+                            <rect x="70" y="20" width="10" height="10" fill="#faf8f5" />
                             <rect x="15" y="65" width="20" height="20" />
-                            <rect x="20" y="70" width="10" height="10" fill="white" />
-                            {/* Styled dots/random squares */}
+                            <rect x="20" y="70" width="10" height="10" fill="#faf8f5" />
                             <rect x="45" y="15" width="8" height="8" />
                             <rect x="45" y="28" width="8" height="8" />
                             <rect x="45" y="45" width="10" height="10" />
@@ -1875,222 +1967,390 @@ export default function QuotationsView({
                             <rect x="65" y="78" width="8" height="8" />
                             <rect x="78" y="78" width="8" height="8" />
                           </svg>
-                          <span className="text-[7px] font-mono tracking-widest text-slate-400">SECURE VERIFIED</span>
+                          <span className="text-[7px] font-mono tracking-widest text-amber-700/60">VERIFIED PROPOSAL</span>
                         </div>
                       </>
                     )}
 
-                    {/* Cover Page Header - Full Bleed Width Banner */}
-                    {coverTheme === "corporate-accent" ? (
+                    {coverTheme === "serene-sage" && (
+                      <>
+                        <img 
+                          src="https://images.unsplash.com/photo-1540932239986-30128078f3c5?auto=format&fit=crop&w=1200&q=80" 
+                          alt="Serene Sage Background" 
+                          className="absolute inset-0 w-full h-full object-cover opacity-6 mix-blend-multiply pointer-events-none z-0" 
+                          referrerPolicy="no-referrer"
+                        />
+                        {/* Symmetrical Left-hand sage divider */}
+                        <div className="absolute left-0 top-0 bottom-0 w-2 bg-emerald-600/30 pointer-events-none z-0" />
+                        
+                        {/* Dot Grid accent on right and soft sage highlights */}
+                        <div 
+                          className="absolute top-12 right-12 w-32 h-32 opacity-15 pointer-events-none z-0" 
+                          style={{ backgroundImage: "radial-gradient(#059669 1.5px, transparent 1.5px)", backgroundSize: "12px 12px" }} 
+                        />
+                        <div className="absolute bottom-24 right-0 w-48 h-48 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none z-0" />
+
+                        {/* Botanical Seal at bottom-left */}
+                        <div className="absolute left-8 bottom-12 z-10 flex items-center gap-2 select-none scale-90 origin-left">
+                          <div className="flex flex-col items-center justify-center bg-emerald-50 border border-emerald-250 text-emerald-800 font-extrabold w-12 h-12 rounded-full shadow-sm">
+                            <Sparkles className="w-5 h-5 text-emerald-700" />
+                          </div>
+                          <div className="text-left leading-tight">
+                            <div className="text-[9px] font-bold text-emerald-750 uppercase tracking-widest font-mono">ECOLOGICAL VALUE</div>
+                            <div className="text-[10px] font-black text-emerald-950 uppercase tracking-wider">SECURE SERVICE</div>
+                          </div>
+                        </div>
+
+                        {/* QR Code in bottom-right */}
+                        <div className="absolute right-8 bottom-12 z-10 flex flex-col items-end gap-1.5 opacity-80 scale-90 origin-right print:opacity-100">
+                          <svg className="w-16 h-16 text-emerald-850/60" viewBox="0 0 100 100" fill="currentColor">
+                            <path d="M0,0 h30 v10 h-20 v20 h-10 z" />
+                            <path d="M70,0 h30 v30 h-10 v-20 h-20 z" />
+                            <path d="M0,70 h10 v20 h20 v10 h-30 z" />
+                            <path d="M100,70 h-10 v20 h-20 v10 h30 z" />
+                            <rect x="15" y="15" width="20" height="20" />
+                            <rect x="20" y="20" width="10" height="10" fill="#f4f7f5" />
+                            <rect x="65" y="15" width="20" height="20" />
+                            <rect x="70" y="20" width="10" height="10" fill="#f4f7f5" />
+                            <rect x="15" y="65" width="20" height="20" />
+                            <rect x="20" y="70" width="10" height="10" fill="#f4f7f5" />
+                            <rect x="45" y="15" width="8" height="8" />
+                            <rect x="45" y="28" width="8" height="8" />
+                            <rect x="45" y="45" width="10" height="10" />
+                            <rect x="15" y="45" width="8" height="8" />
+                            <rect x="28" y="45" width="8" height="8" />
+                            <rect x="65" y="45" width="8" height="8" />
+                            <rect x="78" y="45" width="8" height="8" />
+                            <rect x="65" y="65" width="8" height="8" />
+                            <rect x="78" y="65" width="8" height="8" />
+                            <rect x="65" y="78" width="8" height="8" />
+                            <rect x="78" y="78" width="8" height="8" />
+                          </svg>
+                          <span className="text-[7px] font-mono tracking-widest text-emerald-850/50">SECURE DISCLOSURE</span>
+                        </div>
+                      </>
+                    )}
+
+                    {coverTheme === "minimal-blue" && (
+                      <>
+                        <img 
+                          src="https://images.unsplash.com/photo-1618005198143-d5660b293dec?auto=format&fit=crop&w=1200&q=80" 
+                          alt="Modern Minimalist Blue Background" 
+                          className="absolute inset-0 w-full h-full object-cover opacity-6 mix-blend-multiply pointer-events-none z-0" 
+                          referrerPolicy="no-referrer"
+                        />
+                        {/* Symmetrical split layout or double border */}
+                        <div className="absolute inset-4 sm:inset-6 border border-sky-450/20 pointer-events-none rounded-lg z-0" />
+                        <div className="absolute inset-5 sm:inset-7 border border-dashed border-sky-450/10 pointer-events-none rounded-lg z-0" />
+                        <div className="absolute top-0 right-0 w-[40%] h-[45%] bg-gradient-to-bl from-sky-400/5 to-transparent pointer-events-none z-0" />
+
+                        {/* Modern badge at bottom-left */}
+                        <div className="absolute left-8 bottom-12 z-10 flex items-center gap-2 select-none scale-90 origin-left">
+                          <div className="flex flex-col items-center justify-center bg-sky-50 border border-sky-200 text-sky-800 font-extrabold w-12 h-12 rounded-full shadow-sm">
+                            <Trophy className="w-5 h-5 text-sky-600" />
+                          </div>
+                          <div className="text-left leading-tight">
+                            <div className="text-[9px] font-bold text-sky-700 uppercase tracking-widest font-mono">EXECUTIVE MODERN</div>
+                            <div className="text-[10px] font-black text-slate-800 uppercase tracking-wider">TRUSTED LOGISTICS</div>
+                          </div>
+                        </div>
+
+                        {/* QR Code in bottom-right */}
+                        <div className="absolute right-8 bottom-12 z-10 flex flex-col items-end gap-1.5 opacity-80 scale-90 origin-right print:opacity-100">
+                          <svg className="w-16 h-16 text-sky-850/60" viewBox="0 0 100 100" fill="currentColor">
+                            <path d="M0,0 h30 v10 h-20 v20 h-10 z" />
+                            <path d="M70,0 h30 v30 h-10 v-20 h-20 z" />
+                            <path d="M0,70 h10 v20 h20 v10 h-30 z" />
+                            <path d="M100,70 h-10 v20 h-20 v10 h30 z" />
+                            <rect x="15" y="15" width="20" height="20" />
+                            <rect x="20" y="20" width="10" height="10" fill="#f5f9fc" />
+                            <rect x="65" y="15" width="20" height="20" />
+                            <rect x="70" y="20" width="10" height="10" fill="#f5f9fc" />
+                            <rect x="15" y="65" width="20" height="20" />
+                            <rect x="20" y="70" width="10" height="10" fill="#f5f9fc" />
+                            <rect x="45" y="15" width="8" height="8" />
+                            <rect x="45" y="28" width="8" height="8" />
+                            <rect x="45" y="45" width="10" height="10" />
+                            <rect x="15" y="45" width="8" height="8" />
+                            <rect x="28" y="45" width="8" height="8" />
+                            <rect x="65" y="45" width="8" height="8" />
+                            <rect x="78" y="45" width="8" height="8" />
+                            <rect x="65" y="65" width="8" height="8" />
+                            <rect x="78" y="65" width="8" height="8" />
+                            <rect x="65" y="78" width="8" height="8" />
+                            <rect x="78" y="78" width="8" height="8" />
+                          </svg>
+                          <span className="text-[7px] font-mono tracking-widest text-sky-850/50">OFFICIAL ARCHIVE</span>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Cover Page Header - Left/Right branding info */}
+                    {coverTheme === "classic-ivory" ? (
                       <div className="flex justify-between items-start z-10">
                         <div className="flex items-center gap-3">
-                          {compProfile.headerImage ? (
-                            <img 
-                              src={compProfile.headerImage} 
-                              alt="Company Logo" 
-                              className="w-12 h-12 object-contain rounded-lg" 
-                              referrerPolicy="no-referrer"
-                            />
-                          ) : (
-                            <div className="p-2.5 bg-indigo-650 text-white rounded-xl shadow-sm">
-                              <FileCheck2 className="w-6 h-6 text-white" />
-                            </div>
-                          )}
-                          <div className="text-left font-sans">
-                            <span className="block font-sans font-black text-lg tracking-tight text-slate-800 leading-tight">
+                          <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl shadow-sm">
+                            <Award className="w-6 h-6 text-amber-600" />
+                          </div>
+                          <div className="text-left font-serif">
+                            <span className="block font-serif font-black text-xl tracking-tight text-stone-900 leading-tight">
                               {compProfile.name}
                             </span>
-                            <span className="block text-[9px] text-slate-400 font-mono tracking-widest uppercase mt-0.5">
-                              DELIVERING EXCELLENCE & VALUE
+                            <span className="block text-[9px] text-amber-600 font-mono tracking-widest uppercase mt-0.5">
+                              CLASSIC & ELITE ESTABLISHMENT
                             </span>
                           </div>
                         </div>
+                        <div className="text-right font-mono text-[9px] text-stone-500 bg-stone-100/80 px-2.5 py-1 rounded border border-stone-200 shadow-xs">
+                          <div>REF: {quote.quotationNo}</div>
+                          <div className="mt-0.5">DATE: {formatDate(quote.date)}</div>
+                        </div>
                       </div>
-                    ) : compProfile.headerImage ? (
-                      <div className={`${scaleView === "a4" ? "-mx-[20mm] -mt-[20mm]" : "-mx-8 sm:-mx-12 md:-mx-16 -mt-8 sm:-mt-12 md:-mt-16"} print:-mx-10 print:-mt-10 mb-8 overflow-hidden h-48 sm:h-56 print:h-64 relative rounded-t-2xl print:rounded-none shadow-sm`}>
-                        <img 
-                          src={compProfile.headerImage} 
-                          alt="Cover Page Header Image" 
-                          className="w-full h-full object-cover" 
-                          referrerPolicy="no-referrer" 
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/40 to-transparent flex flex-col justify-end p-6 print:p-10 select-none">
-                          <div className="flex justify-between items-end">
-                            <div>
-                              <div className="text-amber-500 text-[10px] uppercase font-black tracking-widest mb-1">PROPOSAL BY</div>
-                              <span className="font-sans font-extrabold text-lg sm:text-2xl text-white tracking-tight drop-shadow-sm">
-                                {compProfile.name}
-                              </span>
-                            </div>
-                            <div className="text-right font-mono text-[9px] sm:text-[10px] text-slate-200 opacity-90">
-                              <div>REF: {quote.quotationNo}</div>
-                              <div>DATE: {formatDate(quote.date)}</div>
-                            </div>
+                    ) : coverTheme === "serene-sage" ? (
+                      <div className="flex justify-between items-start z-10">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 bg-emerald-50 border border-emerald-150 text-emerald-800 rounded-xl shadow-sm">
+                            <Sparkles className="w-6 h-6 text-emerald-700" />
                           </div>
+                          <div className="text-left font-sans">
+                            <span className="block font-sans font-extrabold text-lg tracking-tight text-emerald-950 leading-tight">
+                              {compProfile.name}
+                            </span>
+                            <span className="block text-[9px] text-emerald-750 font-mono tracking-widest uppercase mt-0.5">
+                              SERENE COLLABORATION & QUALITY
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right font-mono text-[9px] text-emerald-800 bg-emerald-50/80 px-2.5 py-1 rounded border border-emerald-150 shadow-xs">
+                          <div>REF: {quote.quotationNo}</div>
+                          <div className="mt-0.5">DATE: {formatDate(quote.date)}</div>
                         </div>
                       </div>
                     ) : (
-                      <div className={`${scaleView === "a4" ? "-mx-[20mm] -mt-[20mm]" : "-mx-8 sm:-mx-12 md:-mx-16 -mt-8 sm:-mt-12 md:-mt-16"} print:-mx-10 print:-mt-10 mb-8 h-32 print:h-40 flex items-center justify-between px-8 sm:px-12 md:px-16 print:px-10 relative overflow-hidden select-none rounded-t-2xl print:rounded-none ${
-                        coverTheme === "classic-blue" ? "bg-gradient-to-r from-indigo-700 to-indigo-900 text-white" :
-                        coverTheme === "modern-gold" ? "bg-gradient-to-r from-amber-700 to-amber-900 text-white" :
-                        coverTheme === "tech-dark" ? "bg-gradient-to-r from-slate-900 to-teal-950 text-white border-b border-teal-500/20" :
-                        "bg-slate-950 text-white"
-                      }`}>
-                        <div className="flex items-center gap-3 z-10">
-                          <div className="p-2 bg-white/10 rounded-lg">
-                            <FileCheck2 className="w-5 h-5 text-white" />
+                      <div className="flex justify-between items-start z-10">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 bg-sky-50 border border-sky-150 text-sky-800 rounded-xl shadow-sm">
+                            <FileCheck2 className="w-6 h-6 text-sky-600" />
                           </div>
-                          <span className="font-sans font-bold text-xl tracking-tight">
-                            {compProfile.name}
-                          </span>
+                          <div className="text-left font-sans">
+                            <span className="block font-sans font-black text-lg tracking-tight text-slate-900 leading-tight">
+                              {compProfile.name}
+                            </span>
+                            <span className="block text-[9px] text-sky-700 font-mono tracking-widest uppercase mt-0.5">
+                              MODERN EFFICIENCY & DESIGN
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-right font-mono text-[10px] opacity-80 z-10">
+                        <div className="text-right font-mono text-[9px] text-slate-500 bg-slate-100/80 px-2.5 py-1 rounded border border-slate-200 shadow-xs">
                           <div>REF: {quote.quotationNo}</div>
-                          <div>DATE: {formatDate(quote.date)}</div>
+                          <div className="mt-0.5">DATE: {formatDate(quote.date)}</div>
                         </div>
                       </div>
                     )}
 
                     {/* Cover Page Main Content Box */}
-                    <div className={`my-auto py-12 text-left z-10 ${coverTheme === "corporate-accent" ? "pl-0 sm:pl-4 space-y-8" : "text-center sm:text-left space-y-6"}`}>
-                      {coverTheme === "corporate-accent" ? (
-                        <div className="space-y-4">
-                          <div className="space-y-0.5 select-none uppercase tracking-tighter">
-                            <span className="block font-sans font-extrabold text-amber-500 text-4xl sm:text-5xl md:text-6xl tracking-wide leading-none">
-                              Business
-                            </span>
-                            <span className="block font-sans font-black text-slate-900 text-5xl sm:text-6xl md:text-7xl tracking-tight leading-none">
-                              Proposal
-                            </span>
-                            <span className="block font-sans font-extrabold text-slate-800 text-5xl sm:text-6xl md:text-7xl tracking-tight leading-none">
-                              {new Date(quote.date).getFullYear()}
-                            </span>
-                          </div>
-
-                          <div className="text-left pt-6 max-w-sm">
-                            <div className="text-[10px] font-black tracking-widest text-slate-450 uppercase">PLACE YOUR TEXT HERE</div>
-                            <p className="text-[11px] text-slate-500 leading-relaxed mt-2 whitespace-normal font-sans">
-                              {quote.items.some(item => item.productName.toLowerCase().includes("amc") || item.productName.toLowerCase().includes("maintenance"))
-                                ? "This document represents a formal annual maintenance contract (AMC) proposal including service level agreement (SLA) terms for corporate IT support and infrastructure maintenance."
-                                : "This commercial quotation outlines premium product supply, deployment specifications, pricing breakdowns, and business collaboration terms customized for your corporate infrastructure."
-                              }
-                            </p>
-                          </div>
+                    {coverTheme === "classic-ivory" ? (
+                      <div className="my-auto py-4 text-left z-10 pl-2 space-y-4">
+                        <div className="space-y-1.5 select-none uppercase tracking-tighter">
+                          <span className="block font-serif font-light text-amber-600 text-3xl sm:text-4xl tracking-widest leading-none">
+                            OFFICIAL
+                          </span>
+                          <span className="block font-serif font-black text-stone-900 text-5xl sm:text-6xl md:text-7xl tracking-tight leading-none">
+                            {coverPageTitleType === "amc" ? "SERVICE" : "COMMERCIAL"}
+                          </span>
+                          <span className="block font-serif font-extrabold text-amber-600 text-5xl sm:text-6xl md:text-7xl tracking-tight leading-none">
+                            PROPOSAL
+                          </span>
                         </div>
-                      ) : (
-                        <>
-                          <div className={`inline-block px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest ${
-                            coverTheme === "classic-blue" ? "bg-indigo-100 text-indigo-800" :
-                            coverTheme === "modern-gold" ? "bg-amber-100 text-amber-850" :
-                            coverTheme === "tech-dark" ? "bg-teal-50/10 text-teal-400 border border-teal-500/30" :
-                            "bg-slate-950 text-white"
-                          }`}>
-                            Formal Proposal & SLA Contract
-                          </div>
 
-                          <h1 className={`font-sans font-black tracking-tight leading-none ${
-                            coverTheme === "classic-blue" ? "text-slate-900 text-4xl sm:text-5xl" :
-                            coverTheme === "modern-gold" ? "text-amber-900 text-4xl sm:text-5xl font-serif italic" :
-                            coverTheme === "tech-dark" ? "text-white text-4xl sm:text-5xl font-mono uppercase" :
-                            "text-slate-950 text-5xl sm:text-6xl font-sans tracking-tighter uppercase"
-                          }`}>
-                            {quote.items.some(item => item.productName.toLowerCase().includes("amc") || item.productName.toLowerCase().includes("maintenance")) 
-                              ? <>Annual Maintenance <br className="hidden sm:inline" /> Contract Proposal</> 
-                              : <>Commercial <br className="hidden sm:inline" /> Quotation Proposal</>
-                            }
-                          </h1>
-                          
-                          <p className={`text-sm max-w-xl leading-relaxed ${coverTheme === "tech-dark" ? "text-slate-400" : "text-slate-600"}`}>
-                            {quote.items.some(item => item.productName.toLowerCase().includes("amc") || item.productName.toLowerCase().includes("maintenance"))
-                              ? "This contract ensures proactive maintenance, rapid-response service levels (SLAs), and certified hardware/software engineering services tailored specifically for your corporate infrastructure."
-                              : "This document contains the commercial proposal, pricing breakdown, and delivery terms customized for your business requirements. We look forward to a successful collaboration."
+                        <div className="text-left pt-2 max-w-lg">
+                          <div className="text-[9px] font-black tracking-widest text-amber-700 uppercase font-mono">AUTHENTIC DOCUMENT</div>
+                          <p className="text-[11px] text-stone-600 leading-relaxed mt-2 whitespace-normal font-sans max-w-md">
+                            {coverPageTitleType === "amc"
+                              ? "A classical, bespoke annual service level agreement outlining certified diagnostic schedules, premium coverage parameters, and priority-response guarantees."
+                              : "An executive financial estimation detailed with itemized specifications, supply conditions, and tailored pricing structures for elite standards."
                             }
                           </p>
+                        </div>
+                      </div>
+                    ) : coverTheme === "serene-sage" ? (
+                      <div className="my-auto py-4 text-left z-10 pl-2 space-y-4">
+                        <div className="space-y-1.5 select-none uppercase tracking-tighter">
+                          <span className="block font-sans font-bold text-emerald-800 text-3xl sm:text-4xl tracking-widest leading-none">
+                            INTEGRATED
+                          </span>
+                          <h1 className="block font-sans font-black text-emerald-950 text-5xl sm:text-6xl md:text-7xl tracking-tight leading-none">
+                            {coverPageTitleType === "amc" ? "SERVICE SLA" : "COMMERCIAL"}
+                          </h1>
+                          <span className="block font-sans font-extrabold text-emerald-700 text-5xl sm:text-6xl md:text-7xl tracking-tight leading-none">
+                            AGREEMENT
+                          </span>
+                        </div>
 
-                          <div className={`w-32 h-1 rounded-full ${
-                            coverTheme === "classic-blue" ? "bg-indigo-600" :
-                            coverTheme === "modern-gold" ? "bg-amber-500" :
-                            coverTheme === "tech-dark" ? "bg-teal-400" :
-                            "bg-slate-950"
-                          }`} />
-                        </>
-                      )}
-                    </div>
+                        <div className="text-left pt-2 max-w-lg">
+                          <div className="text-[9px] font-black tracking-widest text-emerald-800 uppercase font-mono font-bold">ORGANIC GROWTH & STABILITY</div>
+                          <p className="text-[11px] text-emerald-900/80 leading-relaxed mt-2 whitespace-normal font-sans max-w-md">
+                            {coverPageTitleType === "amc"
+                              ? "A meticulously designed annual maintenance schedule designed to secure operational longevity, prevent component failures, and provide responsive care."
+                              : "A clear, transparent breakdown of material assets, delivery phases, and partnership valuations to support mutual development."
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="my-auto py-4 text-left z-10 pl-2 space-y-4">
+                        <div className="space-y-1.5 select-none uppercase tracking-tighter">
+                          <span className="block font-sans font-light text-sky-600 text-3xl sm:text-4xl tracking-widest leading-none">
+                            SYSTEMATIC
+                          </span>
+                          <h1 className="block font-sans font-black text-slate-900 text-5xl sm:text-6xl md:text-7xl tracking-tight leading-none">
+                            {coverPageTitleType === "amc" ? "SUPPORT" : "COMMERCIAL"}
+                          </h1>
+                          <span className="block font-sans font-extrabold text-sky-600 text-5xl sm:text-6xl md:text-7xl tracking-tight leading-none">
+                            VALUATION
+                          </span>
+                        </div>
+
+                        <div className="text-left pt-2 max-w-lg">
+                          <div className="text-[9px] font-black tracking-widest text-sky-700 uppercase font-mono">BUSINESS EFFICIENCY</div>
+                          <p className="text-[11px] text-slate-600 leading-relaxed mt-2 whitespace-normal font-sans max-w-md">
+                            {coverPageTitleType === "amc"
+                              ? "A modern technical service level agreement specifying rigorous preventative care, responsive remote support, and hardware optimization protocols."
+                              : "An engineered commercial quotation displaying precise pricing indices, shipping timelines, and system integration specs for scalable corporate deployment."
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Metadata Parties Layout */}
-                    <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 text-left text-xs leading-relaxed z-10 ${
-                      coverTheme === "corporate-accent" 
-                        ? "border-t border-slate-150 text-slate-700 bg-slate-50/40 p-5 rounded-xl backdrop-blur-sm max-w-2xl" 
-                        : "border-t border-slate-200/65"
-                    }`}>
-                      {/* Prepared For (Client) */}
-                      <div className="space-y-2">
-                        <span className={`block text-[10px] font-extrabold uppercase tracking-wider ${
-                          coverTheme === "classic-blue" ? "text-indigo-600" :
-                          coverTheme === "modern-gold" ? "text-amber-700" :
-                          coverTheme === "tech-dark" ? "text-teal-400 font-mono" :
-                          "text-slate-500"
-                        }`}>
-                          Prepared For (The Client)
-                        </span>
-                        <div>
-                          <div className={`font-bold text-sm ${coverTheme === "tech-dark" ? "text-white" : "text-slate-900"}`}>
-                            {client?.company || "N/A"}
+                    {coverTheme === "classic-ivory" ? (
+                      <div className="grid grid-cols-2 gap-6 pt-4 border-t border-amber-600/20 text-left text-xs leading-relaxed z-10 text-stone-750 bg-stone-100/50 p-4 rounded-xl border border-amber-600/10 max-w-2xl">
+                        {/* Prepared For (Client) */}
+                        <div className="space-y-1.5 border-r border-stone-200 pr-4">
+                          <span className="block text-[9px] font-extrabold uppercase tracking-wider text-amber-700 font-mono">
+                            PREPARED FOR:
+                          </span>
+                          <div>
+                            <div className="font-serif font-bold text-sm text-stone-900">
+                              {client?.company || "N/A"}
+                            </div>
+                            <div className="text-[10px] opacity-80 mt-0.5 whitespace-pre-line truncate max-w-xs">{client?.billingAddress}</div>
+                            <div className="mt-1 text-[10px]">
+                              <span className="opacity-65">Representative:</span> <span className="font-semibold text-stone-900">{client?.name || "N/A"}</span>
+                            </div>
                           </div>
-                          <div className="opacity-80 mt-1 whitespace-pre-line">{client?.billingAddress}</div>
-                          <div className="mt-2 text-[11px]">
-                            <span className="opacity-60 font-sans">Representative:</span> <span className="font-semibold">{client?.name || "N/A"}</span>
-                          </div>
-                          {client?.gstin && (
-                            <div className="text-[10px] font-mono opacity-70">GSTIN: {client.gstin}</div>
-                          )}
                         </div>
-                      </div>
 
-                      {/* Prepared By (Service Provider) */}
-                      <div className="space-y-2">
-                        <span className={`block text-[10px] font-extrabold uppercase tracking-wider ${
-                          coverTheme === "classic-blue" ? "text-indigo-600" :
-                          coverTheme === "modern-gold" ? "text-amber-700" :
-                          coverTheme === "tech-dark" ? "text-teal-400 font-mono" :
-                          "text-slate-500"
-                        }`}>
-                          Prepared By (The Provider)
-                        </span>
-                        <div>
-                          <div className={`font-bold text-sm ${coverTheme === "tech-dark" ? "text-white" : "text-slate-900"}`}>
-                            {compProfile.name}
+                        {/* Prepared By (Service Provider) */}
+                        <div className="space-y-1.5 pl-2">
+                          <span className="block text-[9px] font-extrabold uppercase tracking-wider text-amber-700 font-mono">
+                            PREPARED BY:
+                          </span>
+                          <div>
+                            <div className="font-serif font-bold text-sm text-stone-900">
+                              {compProfile.name}
+                            </div>
+                            <div className="text-[10px] opacity-80 mt-0.5 truncate max-w-xs">{compProfile.address || "N/A"}</div>
+                            <div className="mt-1 text-[10px] space-y-0.5">
+                              <div className="truncate"><span className="opacity-65">Email:</span> <span className="font-semibold text-stone-900">{compProfile.email || "N/A"}</span></div>
+                            </div>
                           </div>
-                          <div className="opacity-80 mt-1">{compProfile.address || "N/A"}</div>
-                          <div className="mt-2 text-[11px] space-y-0.5 font-sans">
-                            <div><span className="opacity-60">Contact Support:</span> <span className="font-semibold">{compProfile.phone || "N/A"}</span></div>
-                            <div><span className="opacity-60">Corporate Email:</span> <span className="font-semibold">{compProfile.email || "N/A"}</span></div>
-                          </div>
-                          {compProfile.gstin && (
-                            <div className="text-[10px] font-mono opacity-70 mt-1">GSTIN: {compProfile.gstin}</div>
-                          )}
                         </div>
                       </div>
-                    </div>
+                    ) : coverTheme === "serene-sage" ? (
+                      <div className="grid grid-cols-2 gap-6 pt-4 border-t border-emerald-600/20 text-left text-xs leading-relaxed z-10 text-emerald-900/80 bg-emerald-50/50 p-4 rounded-xl border border-emerald-600/10 max-w-2xl">
+                        {/* Prepared For (Client) */}
+                        <div className="space-y-1.5 border-r border-emerald-150 pr-4">
+                          <span className="block text-[9px] font-extrabold uppercase tracking-wider text-emerald-850 font-mono font-bold">
+                            PREPARED FOR:
+                          </span>
+                          <div>
+                            <div className="font-bold text-sm text-emerald-950">
+                              {client?.company || "N/A"}
+                            </div>
+                            <div className="text-[10px] opacity-80 mt-0.5 whitespace-pre-line truncate max-w-xs">{client?.billingAddress}</div>
+                            <div className="mt-1 text-[10px]">
+                              <span className="opacity-65">Representative:</span> <span className="font-semibold text-emerald-950">{client?.name || "N/A"}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Prepared By (Service Provider) */}
+                        <div className="space-y-1.5 pl-2">
+                          <span className="block text-[9px] font-extrabold uppercase tracking-wider text-emerald-850 font-mono font-bold">
+                            PREPARED BY:
+                          </span>
+                          <div>
+                            <div className="font-bold text-sm text-emerald-950">
+                              {compProfile.name}
+                            </div>
+                            <div className="text-[10px] opacity-80 mt-0.5 truncate max-w-xs">{compProfile.address || "N/A"}</div>
+                            <div className="mt-1 text-[10px] space-y-0.5">
+                              <div className="truncate"><span className="opacity-65">Email:</span> <span className="font-semibold text-emerald-950">{compProfile.email || "N/A"}</span></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-200 text-left text-xs leading-relaxed z-10 text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-200 max-w-2xl">
+                        {/* Prepared For (Client) */}
+                        <div className="space-y-1.5 border-r border-slate-200 pr-4">
+                          <span className="block text-[9px] font-extrabold uppercase tracking-wider text-sky-750 font-mono">
+                            PREPARED FOR:
+                          </span>
+                          <div>
+                            <div className="font-bold text-sm text-slate-900">
+                              {client?.company || "N/A"}
+                            </div>
+                            <div className="text-[10px] opacity-80 mt-0.5 whitespace-pre-line truncate max-w-xs">{client?.billingAddress}</div>
+                            <div className="mt-1 text-[10px]">
+                              <span className="opacity-65">Representative:</span> <span className="font-semibold text-slate-900">{client?.name || "N/A"}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Prepared By (Service Provider) */}
+                        <div className="space-y-1.5 pl-2">
+                          <span className="block text-[9px] font-extrabold uppercase tracking-wider text-sky-750 font-mono">
+                            PREPARED BY:
+                          </span>
+                          <div>
+                            <div className="font-bold text-sm text-slate-900">
+                              {compProfile.name}
+                            </div>
+                            <div className="text-[10px] opacity-80 mt-0.5 truncate max-w-xs">{compProfile.address || "N/A"}</div>
+                            <div className="mt-1 text-[10px] space-y-0.5">
+                              <div className="truncate"><span className="opacity-65">Email:</span> <span className="font-semibold text-slate-900">{compProfile.email || "N/A"}</span></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Cover Page Footer block */}
-                    <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-4 border-slate-200/40 text-[9px] opacity-60 font-mono z-10">
+                    <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-3 border-slate-200/40 text-[8px] opacity-65 font-mono z-10">
                       <div>CONFIDENTIAL & PROPRIETARY DOCUMENT</div>
                       <div>VALID UNTIL: {formatDate(quote.validUntil)}</div>
                       <div>© {new Date().getFullYear()} {compProfile.name}. ALL RIGHTS RESERVED.</div>
                     </div>
 
-                    {/* Footer Image on Cover Page */}
-                    {compProfile.footerImage && (
-                      <div className="w-full mt-4 print:hidden z-10">
-                        <img
-                          src={compProfile.footerImage}
-                          alt="Footer Image"
-                          className="w-full h-auto max-h-16 object-contain"
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
-                    )}
+                    {/* White-out block to cover/hide the position: fixed footer image on page 1 (cover page) only */}
+                    <div 
+                      className="hidden print:block absolute" 
+                      style={{
+                        bottom: "-1.2cm",
+                        left: "-1.2cm",
+                        right: "-1.2cm",
+                        height: "4cm",
+                        backgroundColor: 
+                          coverTheme === "classic-ivory" ? "#faf8f5" :
+                          coverTheme === "serene-sage" ? "#f4f7f5" :
+                          coverTheme === "minimal-blue" ? "#f5f9fc" :
+                          "#ffffff",
+                        zIndex: 99
+                      }}
+                    />
                   </div>
                 )}
 
@@ -2112,21 +2372,37 @@ export default function QuotationsView({
                   } : undefined}
                 >
                   <table className="w-full border-collapse">
-                  <tbody>
-                    <tr className="page-break-inside-auto">
-                      <td className="p-0 border-none page-break-inside-auto">
-                        {/* Corporate Letterhead and Invoice Details (Printed once on Page 1) */}
-                        {compProfile.headerImage && (
-                          <div className="w-full mb-6">
-                            <img 
-                              src={compProfile.headerImage} 
-                              alt="Header" 
-                              className="w-full h-auto rounded-t-xl print:rounded-none" 
-                              referrerPolicy="no-referrer"
-                            />
-                          </div>
-                        )}
-                        {isAmcCover ? (
+                    {compProfile.headerImage && (
+                      <thead className="hidden print:table-header-group">
+                        <tr>
+                          <td className="p-0 border-none">
+                            <div className="w-full pb-6">
+                              <img 
+                                src={compProfile.headerImage} 
+                                alt="Header" 
+                                className="w-full h-auto rounded-t-xl print:rounded-none" 
+                                referrerPolicy="no-referrer"
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      </thead>
+                    )}
+                    <tbody>
+                      <tr className="page-break-inside-auto">
+                        <td className="p-0 border-none page-break-inside-auto">
+                          {/* Corporate Letterhead and Invoice Details */}
+                          {compProfile.headerImage && (
+                            <div className="w-full mb-6 print:hidden">
+                              <img 
+                                src={compProfile.headerImage} 
+                                alt="Header" 
+                                className="w-full h-auto rounded-t-xl print:rounded-none" 
+                                referrerPolicy="no-referrer"
+                              />
+                            </div>
+                          )}
+                        {coverPageTitleType === "amc" ? (
                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4 border-b border-slate-200 mb-8 text-left">
                             <div>
                               <span className="text-[10px] font-black tracking-widest text-indigo-600 uppercase">SERVICE AGREEMENT PROPOSAL</span>
@@ -2151,12 +2427,28 @@ export default function QuotationsView({
                             </div>
                           </div>
                         ) : (
-                          <div className="flex justify-between items-center py-2 border-b border-slate-200 mb-4">
-                             <h1 className="text-2xl font-bold uppercase">Quotation</h1>
-                             <div className="text-xs text-right font-mono">
-                                <div>No: {quote.quotationNo}</div>
-                                <div>Date: {formatDate(quote.date)}</div>
-                             </div>
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4 border-b border-slate-200 mb-8 text-left">
+                            <div>
+                              <span className="text-[10px] font-black tracking-widest text-indigo-600 uppercase">COMMERCIAL QUOTATION</span>
+                              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
+                                QUOTATION
+                              </h1>
+                              <p className="text-xs text-slate-500 mt-1">Formal Pricing & Delivery Terms</p>
+                            </div>
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs font-medium space-y-1 min-w-[200px]">
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-450 uppercase text-[9px] font-bold">Quotation No:</span>
+                                <span className="font-mono font-bold text-slate-800">{quote.quotationNo}</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-450 uppercase text-[9px] font-bold">Date:</span>
+                                <span className="text-slate-700 font-bold">{formatDate(quote.date)}</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-450 uppercase text-[9px] font-bold">Valid Until:</span>
+                                <span className="text-slate-700 font-bold">{formatDate(quote.validUntil)}</span>
+                              </div>
+                            </div>
                           </div>
                         )}
 
@@ -2190,7 +2482,7 @@ export default function QuotationsView({
                             <thead>
                               <tr className="bg-slate-50 text-slate-700 border-b border-slate-200 uppercase text-[9px] font-black tracking-wider text-left">
                                 <th className="py-3 px-4 text-center">#</th>
-                                <th className="py-3 px-4 max-w-sm">{isAmcCover ? "Service description / AMC Scope" : "Products and Services"}</th>
+                                <th className="py-3 px-4 max-w-sm">{coverPageTitleType === "amc" ? "Service description / AMC Scope" : "Products and Services"}</th>
                                 <th className="py-3 px-3 text-center">HSN Code</th>
                                 <th className="py-3 px-3 text-center">Qty</th>
                                 <th className="py-3 px-3 text-right">Rate</th>
@@ -2377,7 +2669,7 @@ export default function QuotationsView({
 
                 {/* For Print: Fixed at the very bottom of every page */}
                 {compProfile.footerImage && (
-                  <div className="hidden print:block" style={{ position: "fixed", bottom: "0.4in", left: "0.50in", right: "0.30in", zIndex: 50 }}>
+                  <div className="hidden print:block print-fixed-footer" style={{ position: "fixed", bottom: "0.4in", left: "0.50in", right: "0.30in", zIndex: 10 }}>
                     <img
                       src={compProfile.footerImage}
                       alt="Footer"
